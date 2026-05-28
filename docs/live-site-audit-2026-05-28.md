@@ -23,6 +23,30 @@ Checked on 2026-05-28.
   - Refunds says payments are processed by Paddle.
   - Page includes GoDaddy formatting notes and pasted chat/editor transcript text.
 
+## Existing Site Features To Preserve
+
+- Header navigation with Home and App links.
+- Footer links for App, Privacy Policy, Pricing, Refunds, Terms of Service, Community Guidelines, and Unsubscribe.
+- Home page hero and app CTA.
+- About, mission, features, and success-story content, rewritten without financial-upside language.
+- Photo/gallery-style visual section, replaced in the prototype with stronger app/product imagery.
+- Contact form with name, email, and message.
+- Contact/support block with hours.
+- Pricing page with subscription tiers, Hearts in-app credit packs, a la carte perks, billing/cancellation notes, and legal links.
+- Privacy Policy.
+- Terms of Service.
+- Refunds and Cancellation Policy.
+- Community Guidelines.
+- Unsubscribe/profile removal request form.
+- Cookie notice.
+
+## New Prototype Additions
+
+- `/mockups` page with three design directions: Editorial Warmth, Studio Glass, and Social Postcard.
+- `/contact-us` route for a dedicated contact surface.
+- Static Netlify form declarations for contact and unsubscribe.
+- Netlify redirects for `/terms-of-service`, `/unsubscribe-1`, and client-side routes.
+
 ## Replacement Strategy
 
 Replace the current site-builder site with this GitHub-backed Netlify site. Before DNS cutover, the Netlify preview must pass:

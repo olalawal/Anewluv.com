@@ -36,9 +36,27 @@ Do not transfer DNS until a Netlify preview is crawled and the Stripe-risk copy 
 - `/terms-of-service-1`
 - `/refunds`
 - `/community-guidelines`
+- `/contact-us`
 - `/unsubscribe`
+- `/mockups`
 
 `/terms-of-service` should redirect to `/terms-of-service-1` or both should be served.
+
+## Review Mockups
+
+Run locally:
+
+```bash
+npm install
+npm run dev -- --host 127.0.0.1 --port 5178
+```
+
+Then open:
+
+- `http://127.0.0.1:5178/`
+- `http://127.0.0.1:5178/mockups`
+- `http://127.0.0.1:5178/pricing`
+- `http://127.0.0.1:5178/contact-us`
 
 ## Compliance Rule
 

@@ -7,6 +7,16 @@
   to = "/terms-of-service-1"
   status = 301
 
+[[redirects]]
+  from = "/unsubscribe-1"
+  to = "/unsubscribe"
+  status = 301
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

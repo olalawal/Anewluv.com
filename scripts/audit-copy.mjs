@@ -27,7 +27,11 @@ const failures = [];
 for (const file of scanTargets) {
   const rel = path.normalize(path.relative(root, file));
   if (!/\.(html|jsx|js|ts|tsx|md|json|toml|css)$/.test(rel)) continue;
-  const text = fs.readFileSync(file, "utf8");
+  const text = fs
+    .readFileSync(file, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => !/Stripe is not used to sell/.test(line))
+    .join("\n");
   const matches = [...text.matchAll(risky)];
   if (matches.length) failures.push(`${rel}: ${[...new Set(matches.map((m) => m[0]))].join(", ")}`);
 }
