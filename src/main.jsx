@@ -22,6 +22,19 @@ const featureCards = [
   ["Built-in safety", "Reporting, appeals, moderation review, and community standards designed for a real dating network."],
 ];
 
+const valueSections = [
+  ["Cost-effective dating", "Start free, then upgrade only when you want more discovery, visibility, and convenience. Anewluv keeps core dating access approachable while making premium features optional."],
+  ["Privacy and safety", "Public pages, policies, reporting, moderation, and appeals are rebuilt around clear user trust instead of confusing reward or finance language."],
+  ["Personality profiles", "Members can complete personality sections that add more context to profiles and help matches feel less random."],
+  ["In-app rewards and perks", "Activity can unlock app-based benefits like Hearts, boosts, super-likes, profile visibility, and premium experiences."],
+];
+
+const matchMoments = [
+  ["Discover", "Browse real profiles with prompts, interests, photos, and compatibility context."],
+  ["Connect", "See who fits your preferences and start conversations with more confidence."],
+  ["Grow", "Use premium tools, personality insights, and app perks to keep the experience moving."],
+];
+
 const pricingTiers = [
   ["Free", "$0", "Daily discovery caps, basic matching, profile creation, messaging, ads, and standard community access."],
   ["Plus", "$4.99/mo", "Higher daily caps, rewind swipes, more likes, monthly super-likes, and fewer ads."],
@@ -149,29 +162,98 @@ function HomePage() {
           </div>
         </div>
         <div className="phone-stage" aria-label="Anewluv product preview">
-          <div className="phone-card top-card">
-            <span>Profile match</span>
-            <strong>Thoughtful, creative, local</strong>
-          </div>
-          <div className="phone-shell">
-            <div className="profile-photo" />
-            <div className="profile-body">
-              <span className="pill">Premium discovery</span>
-              <h2>Meet people with more context.</h2>
-              <p>Prompts, photos, preferences, and safer community tools in one dating app.</p>
+          <div className="app-preview">
+            <div className="app-topbar">
+              <span>Anewluv</span>
+              <strong>94%</strong>
+            </div>
+            <div className="match-photo" />
+            <div className="app-card-body">
+              <div className="match-row">
+                <div>
+                  <h2>Maya, 29</h2>
+                  <p>Creative, local, looking for a real connection.</p>
+                </div>
+                <span className="match-score">Match</span>
+              </div>
+              <div className="mini-metrics">
+                <span>Personality</span>
+                <span>Shared values</span>
+                <span>Safety checked</span>
+              </div>
+            </div>
+            <div className="app-tabbar">
+              <span>Discover</span>
+              <span>Likes</span>
+              <span>Profile</span>
             </div>
           </div>
-          <div className="phone-card bottom-card">
-            <span>Safety-first</span>
-            <strong>Reports, appeals, moderation</strong>
+          <div className="couple-card">
+            <strong>Better matches start with better context.</strong>
+            <span>Profiles, photos, preferences, personality, and perks working together.</span>
           </div>
         </div>
       </section>
 
-      <section className="section two-column">
+      <section className="section match-section">
+        <div>
+          <p className="eyebrow">Couples and matching</p>
+          <h2>Designed for people who want more than a swipe.</h2>
+          <p>
+            The new site should show the actual dating outcome: people meeting,
+            profiles with useful context, and app tools that make matching feel
+            more intentional.
+          </p>
+        </div>
+        <div className="couple-grid" aria-label="Matching preview cards">
+          <article className="couple-photo primary-couple">
+            <span>Compatibility context</span>
+          </article>
+          <article className="couple-note">
+            <strong>Personality profiles</strong>
+            <p>Section-based personality answers add useful signals without blocking people from using the app.</p>
+          </article>
+          <article className="couple-photo secondary-couple">
+            <span>Real conversations</span>
+          </article>
+        </div>
+      </section>
+
+      <section className="section value-section">
+        <div className="section-heading">
+          <p className="eyebrow">Why Anewluv</p>
+          <h2>Clear value without risky public copy.</h2>
+        </div>
+        <div className="value-grid">
+          {valueSections.map(([title, body]) => (
+            <article className="value-card" key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section journey-section">
+        <div className="section-heading">
+          <p className="eyebrow">How it works</p>
+          <h2>Meet, match, and improve the experience over time.</h2>
+        </div>
+        <div className="journey-row">
+          {matchMoments.map(([title, body], index) => (
+            <article className="journey-card" key={title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section two-column preserved-section">
         <div>
           <p className="eyebrow">What carries over</p>
-          <h2>All current site features, rebuilt cleanly.</h2>
+          <h2>All current site features, rebuilt in a cleaner format.</h2>
         </div>
         <div className="feature-grid">
           {featureCards.map(([title, body]) => (
