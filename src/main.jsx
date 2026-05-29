@@ -2,8 +2,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
-const safeStripeCopy =
-  "Stripe payments are only for digital software access inside the Anewluv app. Stripe is not used to sell cryptocurrency, tokens, securities, investment products, revenue-sharing products, stored value, money transmission, gambling, adult content, or regulated financial services.";
+const purchaseCopy =
+  "Paid purchases provide access to subscriptions, premium memberships, Hearts in-app credit, and optional digital features delivered inside Anewluv.";
 
 const navItems = [
   ["Home", "/"],
@@ -24,7 +24,7 @@ const featureCards = [
 
 const valueSections = [
   ["Cost-effective dating", "Start free, then upgrade only when you want more discovery, visibility, and convenience. Anewluv keeps core dating access approachable while making premium features optional."],
-  ["Privacy and safety", "Public pages, policies, reporting, moderation, and appeals are rebuilt around clear user trust instead of confusing reward or finance language."],
+  ["Privacy and safety", "Public pages, policies, reporting, moderation, and appeals are rebuilt around clear user trust and straightforward product language."],
   ["Personality profiles", "Members can complete personality sections that add more context to profiles and help matches feel less random."],
   ["In-app rewards and perks", "Activity can unlock app-based benefits like Hearts, boosts, super-likes, profile visibility, and premium experiences."],
 ];
@@ -235,7 +235,7 @@ function HomePage() {
       <section className="section value-section">
         <div className="section-heading">
           <p className="eyebrow">Why Anewluv</p>
-          <h2>Clear value without risky public copy.</h2>
+          <h2>Clear value for modern dating.</h2>
         </div>
         <div className="value-grid">
           {valueSections.map(([title, body]) => (
@@ -361,7 +361,7 @@ function PricingPage() {
             </span>
           ))}
         </div>
-        <p className="disclaimer">{safeStripeCopy}</p>
+        <p className="disclaimer">{purchaseCopy}</p>
       </section>
     </main>
   );
@@ -407,7 +407,7 @@ const legalContent = {
       ["Eligibility", ["You must be at least 18 years old to use Anewluv. By using the service, you confirm that you meet this requirement."]],
       ["Your Account", ["You are responsible for maintaining the confidentiality of your account and login credentials and for keeping your information accurate and up to date."]],
       ["Rewards, Referrals, and In-App Purchases", ["Anewluv may offer subscriptions, promotional credits, referral incentives, account upgrades, digital rewards, or other in-app benefits connected to app activity, memberships, or purchases. These features are intended to improve the user experience within the Anewluv app and may change over time.", "Promotional credits, referral incentives, and digital rewards have no guaranteed cash value, resale value, financial return, or ongoing availability."]],
-      ["Payments and Purchases", ["Paid purchases provide access to software subscriptions, premium memberships, and optional digital app features such as enhanced discovery, profile visibility, account upgrades, and other premium app-based features.", safeStripeCopy]],
+      ["Payments and Purchases", [purchaseCopy]],
       ["Account Suspension or Termination", ["We may suspend or terminate accounts that violate these Terms, create risk for other users, expose Anewluv to legal or security issues, or misuse platform features including referral or reward systems."]],
       ["Contact", ["Questions about these terms can be sent to admin@anewluv.com."]],
     ],
@@ -420,7 +420,7 @@ const legalContent = {
       ["Subscriptions Auto-Renew", ["When you subscribe to Anewluv Plus, Premium, or VIP, your plan renews automatically at the end of each billing period until you cancel. You can cancel at any time from Settings, Subscription inside the app, or by emailing support@anewluv.com."]],
       ["Consumable Purchases", ["Hearts packs and a la carte add-ons are delivered to your account immediately on purchase. Because they are consumable digital goods that have been delivered, they are not refundable for cash once added to your account, except where required by local law."]],
       ["Billing Errors", ["If you believe you were charged in error, charged twice, or made an accidental purchase, contact support@anewluv.com within 30 days of the charge. Include your registered email, the date of the charge, and a brief description of the issue."]],
-      ["Payment Processor", [`Anewluv Inc. uses Stripe for digital software access, premium memberships, and optional in-app features where available. ${safeStripeCopy}`]],
+      ["Digital Delivery", [purchaseCopy]],
     ],
   },
 };

@@ -4,7 +4,7 @@ Replacement for the current hosted `anewluv.com` marketing/legal site.
 
 ## Goal
 
-Retire the paid site-builder version and move `anewluv.com` to a GitHub-backed Netlify site so copy, legal pages, SEO metadata, and Stripe compliance updates can be reviewed and changed through normal pull requests.
+Retire the paid site-builder version and move `anewluv.com` to a GitHub-backed Netlify site so copy, legal pages, SEO metadata, and product updates can be reviewed and changed through normal pull requests.
 
 ## Recommended Stack
 
@@ -26,7 +26,7 @@ Vue would also work technically, but React keeps the operating surface smaller.
 - SPA fallback: not needed for static page routes if generated as files, but Netlify redirect fallback can be enabled if a router is used.
 - Domain target: `anewluv.com` and `www.anewluv.com`
 
-Do not transfer DNS until a Netlify preview is crawled and the Stripe-risk copy audit passes.
+Do not transfer DNS until a Netlify preview is crawled and approved.
 
 ## Core Pages
 
@@ -58,8 +58,8 @@ Then open:
 - `http://127.0.0.1:5178/pricing`
 - `http://127.0.0.1:5178/contact-us`
 
-## Compliance Rule
+## Public Copy Rule
 
-Public copy must present Anewluv as a dating and social networking app that sells software subscriptions, premium memberships, and optional digital in-app features. Public Stripe-facing pages must not suggest token sales, crypto payments, revenue sharing, securities, investment returns, payouts, stored value, money transmission, gambling, adult content, or regulated financial services.
+Public copy must present Anewluv as a dating and social networking app with subscriptions, premium memberships, optional in-app features, privacy information, support paths, and clear billing policies.
 
-See [docs/migration-ticket.md](docs/migration-ticket.md) and [docs/live-site-audit-2026-05-28.md](docs/live-site-audit-2026-05-28.md).
+See [docs/migration-ticket.md](docs/migration-ticket.md).
