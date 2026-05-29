@@ -82,9 +82,8 @@ screenshots to `ANEWLUV_SITE_APP_SCREENSHOT_BASE_URL`. Set
 `VITE_ANEWLUV_LIVE_APP_EMBEDS=true` only after the app supports a readonly
 marketing embed session for every preview frame.
 
-Header and footer social links default to the public Anewluv X and TikTok pages.
-Override them with `VITE_ANEWLUV_X_URL` and `VITE_ANEWLUV_TIKTOK_URL` if the
-handles change.
+Header and footer social links currently show TikTok only. Override the TikTok
+destination with `VITE_ANEWLUV_TIKTOK_URL` if the handle changes.
 
 Then open:
 

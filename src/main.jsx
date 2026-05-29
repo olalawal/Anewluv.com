@@ -23,7 +23,6 @@ const APP_SCREENSHOT_BASE_URL = (
   import.meta.env.VITE_ANEWLUV_APP_SCREENSHOT_BASE_URL || "/generated/app-screens"
 ).replace(/\/$/, "");
 const socialLinks = [
-  ["X", import.meta.env.VITE_ANEWLUV_X_URL || "https://x.com/AnewluvDGOD", "x"],
   ["TikTok", import.meta.env.VITE_ANEWLUV_TIKTOK_URL || "https://www.tiktok.com/@anewluv4", "tiktok"],
 ];
 let appPreviewPageSeed = "";
