@@ -35,6 +35,37 @@ const matchMoments = [
   ["Grow", "Use premium tools, personality insights, and app perks to keep the experience moving."],
 ];
 
+const heroCards = [
+  {
+    label: "Log in",
+    title: "Open the app",
+    body: "Start browsing, matching, and messaging.",
+    href: "https://app.anewluv.com",
+    icon: "arrow",
+  },
+  {
+    label: "Profiles",
+    title: "Personality",
+    body: "Add more context to your profile.",
+    href: "https://app.anewluv.com",
+    icon: "spark",
+  },
+  {
+    label: "Plans",
+    title: "Pricing",
+    body: "See free and premium app options.",
+    href: "/pricing",
+    icon: "card",
+  },
+  {
+    label: "Trust",
+    title: "Safety",
+    body: "Review community standards.",
+    href: "/community-guidelines",
+    icon: "shield",
+  },
+];
+
 const pricingTiers = [
   ["Free", "$0", "Daily discovery caps, basic matching, profile creation, messaging, ads, and standard community access."],
   ["Plus", "$4.99/mo", "Higher daily caps, rewind swipes, more likes, monthly super-likes, and fewer ads."],
@@ -160,37 +191,19 @@ function HomePage() {
               View pricing
             </a>
           </div>
-        </div>
-        <div className="phone-stage" aria-label="Anewluv product preview">
-          <div className="app-preview">
-            <div className="app-topbar">
-              <span>Anewluv</span>
-              <strong>94%</strong>
-            </div>
-            <div className="match-photo" />
-            <div className="app-card-body">
-              <div className="match-row">
-                <div>
-                  <h2>Maya, 29</h2>
-                  <p>Creative, local, looking for a real connection.</p>
-                </div>
-                <span className="match-score">Match</span>
-              </div>
-              <div className="mini-metrics">
-                <span>Personality</span>
-                <span>Shared values</span>
-                <span>Safety checked</span>
-              </div>
-            </div>
-            <div className="app-tabbar">
-              <span>Discover</span>
-              <span>Likes</span>
-              <span>Profile</span>
-            </div>
-          </div>
-          <div className="couple-card">
-            <strong>Better matches start with better context.</strong>
-            <span>Profiles, photos, preferences, personality, and perks working together.</span>
+          <div className="hero-card-row" aria-label="Quick actions">
+            {heroCards.map((card) => (
+              <a className="hero-action-card" href={card.href} key={card.title}>
+                <span className={`hero-icon ${card.icon}`} aria-hidden="true">
+                  <IconGlyph type={card.icon} />
+                </span>
+                <span className="hero-card-text">
+                  <small>{card.label}</small>
+                  <strong>{card.title}</strong>
+                  <span>{card.body}</span>
+                </span>
+              </a>
+            ))}
           </div>
         </div>
       </section>
@@ -267,6 +280,35 @@ function HomePage() {
 
       <ContactSection />
     </main>
+  );
+}
+
+function IconGlyph({ type }) {
+  if (type === "shield") {
+    return (
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M12 3.5 18 6v5.2c0 4-2.4 7.5-6 9.1-3.6-1.6-6-5.1-6-9.1V6l6-2.5Z" />
+      </svg>
+    );
+  }
+  if (type === "card") {
+    return (
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M4 7.5h16v9H4v-9Zm0 3h16M7 14h4" />
+      </svg>
+    );
+  }
+  if (type === "spark") {
+    return (
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="m12 3 1.8 5.1L19 10l-5.2 1.9L12 17l-1.8-5.1L5 10l5.2-1.9L12 3Zm6 11 1 2.8 3 1.2-3 1.1-1 2.9-1-2.9-3-1.1 3-1.2 1-2.8Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M5 12h13M13 6l6 6-6 6" />
+    </svg>
   );
 }
 
