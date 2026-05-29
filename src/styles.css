@@ -213,11 +213,6 @@ img {
   padding: 0;
 }
 
-.social-links.compact a[title*="X"] {
-  background: #050505;
-  color: white;
-}
-
 .social-links.compact a[title*="TikTok"] {
   background: white;
 }
