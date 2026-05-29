@@ -2,9 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[redirects]]
-  from = "/terms-of-service"
-  to = "/terms-of-service-1"
+  from = "/terms-of-service-1"
+  to = "/terms-of-service"
   status = 301
 
 [[redirects]]
@@ -20,6 +24,6 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
+    X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"

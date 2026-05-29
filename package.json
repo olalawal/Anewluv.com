@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run build && node scripts/local-preview-server.mjs",
+    "dev:vite": "vite --host 127.0.0.1 --port 8082",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "npm run build && node scripts/local-preview-server.mjs",
+    "prepare:preview-account": "node scripts/prepare-preview-account.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
