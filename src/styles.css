@@ -5176,10 +5176,12 @@ footer > span {
 
   .app-tour-flow {
     display: flex;
-    gap: 18px;
+    flex-wrap: nowrap;
+    gap: 14px;
     overflow-x: auto;
     padding-inline: 4px;
-    scroll-snap-type: x proximity;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
   }
 
   .tour-phone-frame,
@@ -5208,7 +5210,28 @@ footer > span {
   }
 
   .app-proof-section {
-    padding-bottom: 132px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    overflow: hidden;
+    padding-top: 28px;
+    padding-bottom: 34px;
+  }
+
+  .app-experience-section {
+    padding-top: 32px;
+    padding-bottom: 34px;
+  }
+
+  .app-experience-section .section-heading {
+    margin-bottom: 12px;
+  }
+
+  .app-experience-section .section-heading h2 {
+    font-size: 30px;
+  }
+
+  .app-experience-section .section-heading p:not(.eyebrow) {
+    display: none;
   }
 
   .hero-copy h1 {
@@ -5224,18 +5247,76 @@ footer > span {
   }
 
   .app-proof-copy h2 {
-    font-size: 42px;
+    font-size: 32px;
     line-height: 1;
+  }
+
+  .app-proof-copy,
+  .app-proof-studio {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-proof-copy > p:not(.eyebrow) {
+    max-width: 100%;
+    font-size: 14px;
+    line-height: 1.42;
+  }
+
+  .app-proof-people-card {
+    display: none;
   }
 
   .app-proof-feature-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .app-proof-feature-grid article {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .app-proof-feature-grid article > span {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+  }
+
+  .app-proof-feature-grid article:nth-child(n + 3) {
+    display: none;
+  }
+
+  .app-proof-feature-grid strong {
+    font-size: 14px;
+  }
+
+  .app-proof-feature-grid p {
+    font-size: 12px;
+    line-height: 1.38;
+  }
+
+  .app-proof-actions {
+    gap: 9px;
+    margin-top: 18px;
+  }
+
+  .app-proof-actions .button {
+    min-height: 44px;
+    padding: 11px 16px;
+    font-size: 13px;
   }
 
   .app-proof-studio {
     display: grid;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    justify-items: center;
     min-height: 0;
+    padding-top: 0;
   }
 
   .app-proof-phone,
@@ -5246,13 +5327,66 @@ footer > span {
     grid-column: auto;
     grid-row: auto;
     inset: auto;
-    width: min(100%, 326px);
+    width: min(100%, 292px);
     transform: none;
     justify-self: center;
   }
 
   .app-proof-phone {
-    width: min(100%, 304px);
+    width: min(100%, 250px);
+    border-width: 10px;
+    border-radius: 34px;
+  }
+
+  .app-proof-phone-top {
+    min-height: 42px;
+    padding: 3px 8px 8px;
+  }
+
+  .app-proof-phone-top img {
+    width: 34px;
+    height: 28px;
+  }
+
+  .app-proof-profile-card {
+    min-height: 326px;
+    border-radius: 24px;
+  }
+
+  .app-proof-action-rail {
+    right: 10px;
+    bottom: 82px;
+    gap: 8px;
+  }
+
+  .app-proof-action-rail span {
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+  }
+
+  .app-proof-profile-copy {
+    right: 54px;
+    bottom: 18px;
+    left: 16px;
+  }
+
+  .app-proof-profile-copy h3 {
+    font-size: 20px;
+  }
+
+  .app-proof-bottom-nav {
+    height: 48px;
+  }
+
+  .app-proof-rewards-panel,
+  .app-proof-chat-panel,
+  .app-proof-personality-panel,
+  .app-proof-safety-panel,
+  .app-proof-personality-screen-card,
+  .app-proof-floating-member,
+  .app-proof-photo-card {
+    display: none;
   }
 
   .app-proof-photo-card {
@@ -5295,9 +5429,9 @@ footer > span {
   .app-showcase {
     min-height: auto;
     display: grid;
-    gap: 14px;
+    gap: 10px;
     justify-items: center;
-    padding-top: 84px;
+    padding-top: 54px;
   }
 
   .discover-preview,
@@ -5311,16 +5445,12 @@ footer > span {
   }
 
   .home-preview {
-    width: min(94%, 318px);
-    justify-self: start;
-    margin-top: -26px;
+    display: none;
   }
 
   .myprofile-preview,
   .profile-preview {
-    width: min(94%, 324px);
-    justify-self: end;
-    margin-top: -24px;
+    display: none;
   }
 
   .showcase-heart-field {
@@ -5386,7 +5516,30 @@ footer > span {
   }
 
   .tour-shell {
-    --embed-scale: 0.58;
+    --embed-scale: 0.48;
+  }
+
+  .tour-phone-frame {
+    flex-basis: min(226px, 72vw);
+    padding: 10px;
+    border-radius: 28px;
+  }
+
+  .tour-phone-frame h3 {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .tour-phone-frame p {
+    display: none;
+  }
+
+  .tour-copy-card {
+    display: none;
+  }
+
+  .app-tour-flow .tour-phone-frame:nth-of-type(n + 5) {
+    display: none;
   }
 
   .couple-grid {
