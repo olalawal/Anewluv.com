@@ -199,7 +199,7 @@ function markSubmitted(submissionKey, now = Date.now()) {
   recentSubmissions.set(submissionKey, now);
 }
 
-async function verifyTurnstile({ correlationId, remoteIp, token }) {
+async function verifyTurnstile({ remoteIp, token }) {
   const secret = env("TURNSTILE_SECRET_KEY");
   const hostnames = allowedHostnames();
   if (!secret || !hostnames.length) return { configured: false, success: false };
@@ -210,7 +210,7 @@ async function verifyTurnstile({ correlationId, remoteIp, token }) {
   const form = new FormData();
   form.set("secret", secret);
   form.set("response", token);
-  form.set("idempotency_key", correlationId);
+  form.set("idempotency_key", randomUUID());
   if (remoteIp) form.set("remoteip", remoteIp);
 
   try {
@@ -319,6 +319,9 @@ export default async (req, context = {}) => {
     submission.kind === "unsubscribe" && submission.username
       ? `${submission.message}\n\nUsername: ${submission.username}`
       : submission.message;
+  if (description.length > MAX_MESSAGE_LENGTH) {
+    return jsonResponse({ code: "invalid_message" }, 400, correlationId);
+  }
   const submissionKey = hmac(
     gatewayKey,
     "contact-submission",
@@ -331,7 +334,6 @@ export default async (req, context = {}) => {
   }
 
   const turnstile = await verifyTurnstile({
-    correlationId,
     remoteIp: context?.ip,
     token: submission.turnstileToken,
   });

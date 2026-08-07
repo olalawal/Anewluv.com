@@ -6,7 +6,7 @@ const purchaseCopy =
   "Paid purchases provide access to subscriptions, premium memberships, Hearts in-app credit, and optional digital features delivered inside Anewluv.";
 
 const CONTACT_ENDPOINT = "/api/contact";
-const CONTACT_SUBMIT_TIMEOUT_MS = 12000;
+const CONTACT_SUBMIT_TIMEOUT_MS = 25000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_MESSAGE_LENGTH = 10;
 const MAX_MESSAGE_LENGTH = 2000;
@@ -2572,10 +2572,15 @@ function ContactSection({ mode = "contact" }) {
   const trimmedName = formState.name.trim();
   const trimmedEmail = formState.email.trim();
   const trimmedMessage = formState.message.trim();
+  const trimmedUsername = formState.username.trim();
+  const unsubscribeSuffixLength = isUnsubscribe && trimmedUsername
+    ? `\n\nUsername: ${trimmedUsername}`.length
+    : 0;
+  const messageMaxLength = MAX_MESSAGE_LENGTH - unsubscribeSuffixLength;
   const emailLooksValid = isValidEmail(trimmedEmail);
   const messageLengthValid =
     trimmedMessage.length >= MIN_MESSAGE_LENGTH &&
-    trimmedMessage.length <= MAX_MESSAGE_LENGTH;
+    trimmedMessage.length <= messageMaxLength;
   const canSubmit =
     submitState.status !== "submitting" &&
     emailLooksValid &&
@@ -2613,7 +2618,7 @@ function ContactSection({ mode = "contact" }) {
         message: trimmedMessage,
         name: trimmedName,
         turnstile_token: turnstileToken,
-        username: formState.username.trim(),
+        username: trimmedUsername,
         website: formState.website,
       });
       turnstileRef.current?.reset();
@@ -2668,6 +2673,7 @@ function ContactSection({ mode = "contact" }) {
       trimmedEmail,
       trimmedMessage,
       trimmedName,
+      trimmedUsername,
       turnstileToken,
     ],
   );
@@ -2727,7 +2733,7 @@ function ContactSection({ mode = "contact" }) {
           Message
           <textarea
             name="message"
-            maxLength={MAX_MESSAGE_LENGTH}
+            maxLength={messageMaxLength}
             onChange={updateField}
             rows="5"
             required

@@ -194,6 +194,59 @@ test("valid submission forwards only server-controlled metadata to the safe endp
   assert.ok(!("user_agent" in body));
 });
 
+test("uses a dedicated UUID for Turnstile idempotency", async () => {
+  const calls = installFetchMock();
+  const requestId = "req-contact-not-a-uuid";
+  const response = await handler(request(validPayload), context("203.0.113.25", requestId));
+
+  assert.equal(response.status, 200);
+  const turnstileCall = calls.find((call) => call.href.includes("challenges.cloudflare.com"));
+  assert.ok(turnstileCall);
+  const idempotencyKey = turnstileCall.options.body.get("idempotency_key");
+  assert.match(
+    idempotencyKey,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
+  assert.notEqual(idempotencyKey, requestId);
+});
+
+test("rejects unsubscribe descriptions that exceed the Xano limit", async () => {
+  const calls = installFetchMock();
+  const response = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      message: "x".repeat(2000),
+      username: "member-name",
+    }),
+    context(),
+  );
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, "invalid_message");
+  assert.equal(calls.length, 0);
+});
+
+test("accepts an unsubscribe description exactly at the Xano limit", async () => {
+  const calls = installFetchMock();
+  const username = "member-name";
+  const suffix = `\n\nUsername: ${username}`;
+  const response = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      message: "x".repeat(2000 - suffix.length),
+      username,
+    }),
+    context(),
+  );
+
+  assert.equal(response.status, 200);
+  const xanoCall = calls.find((call) => call.href.includes("xano.example"));
+  assert.ok(xanoCall);
+  assert.equal(JSON.parse(xanoCall.options.body).description.length, 2000);
+});
+
 test("fails closed when security secrets are not configured", async () => {
   const calls = installFetchMock();
   delete process.env.CONTACT_GATEWAY_KEY;
