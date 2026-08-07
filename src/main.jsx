@@ -9,6 +9,13 @@ const CONTACT_ENDPOINT = "/api/contact";
 const CONTACT_SUBMIT_TIMEOUT_MS = 12000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_MESSAGE_LENGTH = 10;
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_NAME_LENGTH = 100;
+const MAX_USERNAME_LENGTH = 80;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+const TURNSTILE_SCRIPT_ID = "anewluv-turnstile-script";
+const TURNSTILE_SCRIPT_URL =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const APP_BASE_URL = "https://app.anewluv.com";
 const APP_PREVIEW_ENDPOINT = "/api/app-preview";
 const THEME_STORAGE_KEY = "anewluv-site-theme";
@@ -287,31 +294,92 @@ function isValidEmail(value) {
   return typeof value === "string" && EMAIL_RE.test(value.trim());
 }
 
-function buildContactMetadata({ email, name }) {
-  const viewport =
-    typeof window !== "undefined" && window.innerWidth
-      ? `${window.innerWidth}x${window.innerHeight}`
-      : "";
-  const userAgent =
-    typeof navigator !== "undefined" && navigator.userAgent
-      ? String(navigator.userAgent)
-      : "";
+function loadTurnstileScript() {
+  if (typeof window === "undefined") return Promise.reject(new Error("browser_required"));
+  if (window.turnstile) return Promise.resolve(window.turnstile);
 
-  return {
-    app_version: "marketing-site",
-    authenticated: false,
-    email,
-    email_verified: null,
-    moderation_state: null,
-    name: name || null,
-    platform: "web",
-    route: typeof window !== "undefined" ? window.location.pathname : "/contact-us",
-    source: "anewluv_marketing_site",
-    submitted_at: new Date().toISOString(),
-    user_agent: userAgent,
-    viewport,
-  };
+  const existing = document.getElementById(TURNSTILE_SCRIPT_ID);
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener("load", () => resolve(window.turnstile), { once: true });
+      existing.addEventListener("error", reject, { once: true });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.id = TURNSTILE_SCRIPT_ID;
+    script.src = TURNSTILE_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener("load", () => resolve(window.turnstile), { once: true });
+    script.addEventListener("error", reject, { once: true });
+    document.head.appendChild(script);
+  });
 }
+
+const TurnstileWidget = React.forwardRef(function TurnstileWidget(
+  { onStatusChange, onToken },
+  ref,
+) {
+  const containerRef = React.useRef(null);
+  const widgetIdRef = React.useRef(null);
+
+  React.useImperativeHandle(ref, () => ({
+    reset() {
+      onToken("");
+      if (window.turnstile && widgetIdRef.current != null) {
+        window.turnstile.reset(widgetIdRef.current);
+      }
+    },
+  }));
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!TURNSTILE_SITE_KEY) {
+      onStatusChange("unavailable");
+      return undefined;
+    }
+
+    onStatusChange("loading");
+    loadTurnstileScript()
+      .then((turnstile) => {
+        if (cancelled || !turnstile || !containerRef.current) return;
+        widgetIdRef.current = turnstile.render(containerRef.current, {
+          action: "contact_form",
+          appearance: "interaction-only",
+          callback: (token) => {
+            onToken(token);
+            onStatusChange("ready");
+          },
+          "error-callback": () => {
+            onToken("");
+            onStatusChange("error");
+          },
+          "expired-callback": () => {
+            onToken("");
+            onStatusChange("expired");
+          },
+          sitekey: TURNSTILE_SITE_KEY,
+          size: "flexible",
+          theme: "auto",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) onStatusChange("error");
+      });
+
+    return () => {
+      cancelled = true;
+      if (window.turnstile && widgetIdRef.current != null) {
+        window.turnstile.remove(widgetIdRef.current);
+      }
+      widgetIdRef.current = null;
+    };
+  }, [onStatusChange, onToken]);
+
+  return <div className="turnstile-widget" ref={containerRef} />;
+});
 
 function getAppPreviewSessionId() {
   if (typeof window === "undefined") return "server";
@@ -407,18 +475,13 @@ function applySiteTheme(theme) {
   }
 }
 
-async function submitContactUsPOST({ subject, category, description, metadata }) {
+async function submitContactUsPOST(payload) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONTACT_SUBMIT_TIMEOUT_MS);
 
   try {
     const response = await fetch(CONTACT_ENDPOINT, {
-      body: JSON.stringify({
-        subject,
-        category,
-        description,
-        ...metadata,
-      }),
+      body: JSON.stringify(payload),
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -427,13 +490,6 @@ async function submitContactUsPOST({ subject, category, description, metadata })
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-
-    if (response.status === 404) {
-      return { ok: false, status: 404, code: "endpoint_unavailable" };
-    }
-    if (response.status === 429) {
-      return { ok: false, status: 429, code: "rate_limited" };
-    }
 
     let body = null;
     try {
@@ -445,7 +501,12 @@ async function submitContactUsPOST({ subject, category, description, metadata })
     if (response.status >= 200 && response.status < 300) {
       return { ok: true, status: response.status, body };
     }
-    return { ok: false, status: response.status, body, code: "submit_failed" };
+    return {
+      ok: false,
+      status: response.status,
+      body,
+      code: body?.code || (response.status === 429 ? "rate_limited" : "submit_failed"),
+    };
   } catch (error) {
     clearTimeout(timeoutId);
     if (error?.name === "AbortError") {
@@ -2491,12 +2552,18 @@ function PageHero({ eyebrow, title, body }) {
 
 function ContactSection({ mode = "contact" }) {
   const isUnsubscribe = mode === "unsubscribe";
+  const turnstileRef = React.useRef(null);
   const [formState, setFormState] = React.useState({
     name: "",
     email: "",
     username: "",
     message: "",
+    website: "",
   });
+  const [turnstileToken, setTurnstileToken] = React.useState("");
+  const [turnstileStatus, setTurnstileStatus] = React.useState(
+    TURNSTILE_SITE_KEY ? "loading" : "unavailable",
+  );
   const [submitState, setSubmitState] = React.useState({
     status: "idle",
     errorMessage: "",
@@ -2506,9 +2573,21 @@ function ContactSection({ mode = "contact" }) {
   const trimmedEmail = formState.email.trim();
   const trimmedMessage = formState.message.trim();
   const emailLooksValid = isValidEmail(trimmedEmail);
-  const messageLongEnough = trimmedMessage.length >= MIN_MESSAGE_LENGTH;
+  const messageLengthValid =
+    trimmedMessage.length >= MIN_MESSAGE_LENGTH &&
+    trimmedMessage.length <= MAX_MESSAGE_LENGTH;
   const canSubmit =
-    submitState.status !== "submitting" && emailLooksValid && messageLongEnough;
+    submitState.status !== "submitting" &&
+    emailLooksValid &&
+    messageLengthValid &&
+    Boolean(turnstileToken);
+
+  const updateTurnstileStatus = React.useCallback((status) => {
+    setTurnstileStatus(status);
+  }, []);
+  const updateTurnstileToken = React.useCallback((token) => {
+    setTurnstileToken(token);
+  }, []);
 
   const updateField = React.useCallback((event) => {
     const { name, value } = event.target;
@@ -2528,29 +2607,20 @@ function ContactSection({ mode = "contact" }) {
       }
 
       setSubmitState({ status: "submitting", errorMessage: "" });
-      const description = isUnsubscribe
-        ? [
-            trimmedMessage,
-            formState.username.trim()
-              ? `Username: ${formState.username.trim()}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n\n")
-        : trimmedMessage;
       const response = await submitContactUsPOST({
-        subject: isUnsubscribe ? "Unsubscribe request" : "Website contact request",
-        category: isUnsubscribe ? "account_help" : "general",
-        description,
-        metadata: buildContactMetadata({
-          email: trimmedEmail,
-          name: trimmedName,
-        }),
+        email: trimmedEmail,
+        kind: isUnsubscribe ? "unsubscribe" : "contact",
+        message: trimmedMessage,
+        name: trimmedName,
+        turnstile_token: turnstileToken,
+        username: formState.username.trim(),
+        website: formState.website,
       });
+      turnstileRef.current?.reset();
 
       if (response?.ok) {
         setSubmitState({ status: "success", errorMessage: "" });
-        setFormState({ name: "", email: "", username: "", message: "" });
+        setFormState({ name: "", email: "", username: "", message: "", website: "" });
         return;
       }
 
@@ -2559,6 +2629,21 @@ function ContactSection({ mode = "contact" }) {
           status: "error",
           errorMessage: "Too many requests right now. Wait a minute and try again.",
         });
+        return;
+      }
+      if (response?.code === "anti_bot_invalid") {
+        setSubmitState({
+          status: "error",
+          errorMessage: "Security verification expired. Complete it again and resend.",
+        });
+        return;
+      }
+      if (response?.code === "duplicate") {
+        setSubmitState({
+          status: "success",
+          errorMessage: "",
+        });
+        setFormState({ name: "", email: "", username: "", message: "", website: "" });
         return;
       }
       if (response?.code === "endpoint_unavailable") {
@@ -2578,10 +2663,12 @@ function ContactSection({ mode = "contact" }) {
     [
       canSubmit,
       formState.username,
+      formState.website,
       isUnsubscribe,
       trimmedEmail,
       trimmedMessage,
       trimmedName,
+      turnstileToken,
     ],
   );
 
@@ -2607,6 +2694,7 @@ function ContactSection({ mode = "contact" }) {
           <input
             name="name"
             autoComplete="name"
+            maxLength={MAX_NAME_LENGTH}
             onChange={updateField}
             value={formState.name}
           />
@@ -2617,6 +2705,7 @@ function ContactSection({ mode = "contact" }) {
             name="email"
             type="email"
             autoComplete="email"
+            maxLength={254}
             onChange={updateField}
             required
             value={formState.email}
@@ -2628,6 +2717,7 @@ function ContactSection({ mode = "contact" }) {
             <input
               name="username"
               autoComplete="username"
+              maxLength={MAX_USERNAME_LENGTH}
               onChange={updateField}
               value={formState.username}
             />
@@ -2637,19 +2727,40 @@ function ContactSection({ mode = "contact" }) {
           Message
           <textarea
             name="message"
+            maxLength={MAX_MESSAGE_LENGTH}
             onChange={updateField}
             rows="5"
             required
             value={formState.message}
           />
         </label>
+        <label aria-hidden="true" className="contact-honeypot">
+          Website
+          <input
+            autoComplete="off"
+            name="website"
+            onChange={updateField}
+            tabIndex={-1}
+            value={formState.website}
+          />
+        </label>
+        <TurnstileWidget
+          onStatusChange={updateTurnstileStatus}
+          onToken={updateTurnstileToken}
+          ref={turnstileRef}
+        />
+        {["unavailable", "error", "expired"].includes(turnstileStatus) ? (
+          <p className="form-feedback error">
+            Security verification is unavailable. Email admin@anewluv.com directly.
+          </p>
+        ) : null}
         {submitState.status === "success" ? (
           <p className="form-feedback success">Message sent. We will review it soon.</p>
         ) : null}
         {submitState.status === "error" ? (
           <p className="form-feedback error">{submitState.errorMessage}</p>
         ) : null}
-        <button disabled={submitState.status === "submitting"} type="submit">
+        <button disabled={!canSubmit} type="submit">
           {submitState.status === "submitting" ? "Sending..." : "Send"}
         </button>
       </form>

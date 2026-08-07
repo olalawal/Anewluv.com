@@ -57,6 +57,11 @@ handlers Netlify runs after deploy. Local-only service settings belong in
 Header and footer social links currently show TikTok only. Override the TikTok
 destination with `VITE_ANEWLUV_TIKTOK_URL` if the handle changes.
 
+The contact and unsubscribe forms fail closed until Cloudflare Turnstile and
+the private Xano gateway contract are configured. Follow
+[`docs/contact-abuse-hardening.md`](docs/contact-abuse-hardening.md) before
+testing either form on a deploy preview.
+
 Then open:
 
 - `http://127.0.0.1:8082/`
