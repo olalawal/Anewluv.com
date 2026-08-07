@@ -110,12 +110,34 @@ test("honeypot submissions create no ticket or email", async () => {
 test("rejects an oversized body", async () => {
   const calls = installFetchMock();
   const response = await handler(
-    request({ ...validPayload, message: "x".repeat(9000) }),
+    request({ ...validPayload, message: "x".repeat(40_000) }),
     context(),
   );
   assert.equal(response.status, 413);
   assert.equal((await response.json()).code, "payload_too_large");
   assert.equal(calls.length, 0);
+});
+
+test("accepts a maximum multibyte unsubscribe form above the former 8 KB cap", async () => {
+  const calls = installFetchMock();
+  const payload = {
+    ...validPayload,
+    kind: "unsubscribe",
+    message: "界".repeat(1908),
+    name: "界".repeat(100),
+    turnstile_token: "t".repeat(2048),
+    username: "界".repeat(80),
+  };
+  const encodedBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
+  assert.ok(encodedBytes > 8192);
+  assert.ok(encodedBytes <= 32 * 1024);
+
+  const response = await handler(request(payload), context());
+
+  assert.equal(response.status, 200);
+  const xanoCall = calls.find((call) => call.href.includes("xano.example"));
+  assert.ok(xanoCall);
+  assert.equal(JSON.parse(xanoCall.options.body).description.length, 2000);
 });
 
 test("suppresses a duplicate contact pair", async () => {

@@ -2,7 +2,8 @@ import { createHmac, randomUUID } from "node:crypto";
 
 const REQUEST_TIMEOUT_MS = 12000;
 const TURNSTILE_TIMEOUT_MS = 8000;
-const MAX_BODY_BYTES = 8192;
+// Covers worst-case JSON escaping for every bounded field plus the request envelope.
+const MAX_BODY_BYTES = 32 * 1024;
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 254;
 const MIN_MESSAGE_LENGTH = 10;
