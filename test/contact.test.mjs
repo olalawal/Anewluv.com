@@ -92,6 +92,19 @@ test("rejects malformed email and forged trusted fields without side effects", a
   assert.equal(calls.length, 0);
 });
 
+test("rejects inherited request kinds before Turnstile or Xano", async () => {
+  const calls = installFetchMock();
+  for (const kind of ["__proto__", "constructor", "toString"]) {
+    const response = await handler(
+      request({ ...validPayload, kind }),
+      context(),
+    );
+    assert.equal(response.status, 400, kind);
+    assert.equal((await response.json()).code, "invalid_request");
+  }
+  assert.equal(calls.length, 0);
+});
+
 test("rejects a missing or forged public inquiry type before side effects", async () => {
   const calls = installFetchMock();
   const missing = await handler(
@@ -268,6 +281,26 @@ test("rejects dangerous content in name and unsubscribe username", async () => {
   );
   assert.equal(unsafeUsername.status, 400);
   assert.equal((await unsafeUsername.json()).code, "invalid_request");
+
+  resetContactSecurityStateForTests();
+  const bidiName = await handler(
+    request({ ...validPayload, name: "Trusted\u202Eliame" }),
+    context(),
+  );
+  assert.equal(bidiName.status, 400);
+  assert.equal((await bidiName.json()).code, "invalid_request");
+
+  resetContactSecurityStateForTests();
+  const bidiUsername = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      username: "member\u2066admin",
+    }),
+    context(),
+  );
+  assert.equal(bidiUsername.status, 400);
+  assert.equal((await bidiUsername.json()).code, "invalid_request");
   assert.equal(calls.length, 0);
 });
 

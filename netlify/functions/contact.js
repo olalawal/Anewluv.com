@@ -163,7 +163,9 @@ function validatePayload(payload) {
   const turnstileToken =
     typeof payload.turnstile_token === "string" ? payload.turnstile_token.trim() : "";
 
-  if (!CONTACT_KINDS[kind]) return { error: "invalid_request", status: 400 };
+  if (!Object.hasOwn(CONTACT_KINDS, kind)) {
+    return { error: "invalid_request", status: 400 };
+  }
   if (kind === "contact" && !Object.hasOwn(CONTACT_TOPICS, topic)) {
     return { error: "invalid_request", status: 400 };
   }
@@ -180,6 +182,8 @@ function validatePayload(payload) {
     username.length > MAX_USERNAME_LENGTH ||
     /[\u0000\r\n]/.test(name) ||
     /[\u0000\r\n]/.test(username) ||
+    CONTROL_CHAR_RE.test(name) ||
+    CONTROL_CHAR_RE.test(username) ||
     hasDangerousContent(name) ||
     hasDangerousContent(username)
   ) {
