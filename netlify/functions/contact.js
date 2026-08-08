@@ -23,7 +23,7 @@ const PUBLIC_CONTACT_PATH = "/feedback/contact_us_public";
 const EMAIL_RE =
   /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const CONTROL_CHAR_RE =
-  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
 const DANGEROUS_CONTENT_RE =
   /\b(?:javascript|vbscript)\s*:|\bdata\s*:\s*(?:text\/html|application\/(?:javascript|x-javascript))|\bfile\s*:\/\/|<\s*\/?\s*[a-z][^>]*>|\{\{[^}]+\}\}|\$\{[^}]+\}|(?:'|%27)\s*or\s+(?:1=1|'[^']*'='[^']*)/i;
 const URL_RE = /(?:https?:\/\/|www\.)/gi;

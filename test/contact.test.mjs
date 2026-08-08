@@ -282,25 +282,31 @@ test("rejects dangerous content in name and unsubscribe username", async () => {
   assert.equal(unsafeUsername.status, 400);
   assert.equal((await unsafeUsername.json()).code, "invalid_request");
 
-  resetContactSecurityStateForTests();
-  const bidiName = await handler(
-    request({ ...validPayload, name: "Trusted\u202Eliame" }),
-    context(),
-  );
-  assert.equal(bidiName.status, 400);
-  assert.equal((await bidiName.json()).code, "invalid_request");
+  for (const control of ["\u061C", "\u200E", "\u200F", "\u202E", "\u2066"]) {
+    resetContactSecurityStateForTests();
+    const bidiName = await handler(
+      request({ ...validPayload, name: `Trusted${control}Name` }),
+      context(),
+    );
+    assert.equal(bidiName.status, 400, `name accepted U+${control.codePointAt(0).toString(16)}`);
+    assert.equal((await bidiName.json()).code, "invalid_request");
 
-  resetContactSecurityStateForTests();
-  const bidiUsername = await handler(
-    request({
-      ...validPayload,
-      kind: "unsubscribe",
-      username: "member\u2066admin",
-    }),
-    context(),
-  );
-  assert.equal(bidiUsername.status, 400);
-  assert.equal((await bidiUsername.json()).code, "invalid_request");
+    resetContactSecurityStateForTests();
+    const bidiUsername = await handler(
+      request({
+        ...validPayload,
+        kind: "unsubscribe",
+        username: `member${control}admin`,
+      }),
+      context(),
+    );
+    assert.equal(
+      bidiUsername.status,
+      400,
+      `username accepted U+${control.codePointAt(0).toString(16)}`,
+    );
+    assert.equal((await bidiUsername.json()).code, "invalid_request");
+  }
   assert.equal(calls.length, 0);
 });
 
