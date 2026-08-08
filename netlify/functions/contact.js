@@ -164,7 +164,7 @@ function validatePayload(payload) {
     typeof payload.turnstile_token === "string" ? payload.turnstile_token.trim() : "";
 
   if (!CONTACT_KINDS[kind]) return { error: "invalid_request", status: 400 };
-  if (kind === "contact" && !CONTACT_TOPICS[topic]) {
+  if (kind === "contact" && !Object.hasOwn(CONTACT_TOPICS, topic)) {
     return { error: "invalid_request", status: 400 };
   }
   if (
@@ -446,6 +446,9 @@ export default async (req, context = {}) => {
 
   const kindConfig = CONTACT_KINDS[submission.kind];
   const topicConfig = CONTACT_TOPICS[submission.topic];
+  const category = kindConfig.category;
+  const route = kindConfig.route;
+  const subject = submission.kind === "contact" ? topicConfig.subject : kindConfig.subject;
   const description = submission.kind === "unsubscribe"
     ? submission.username
       ? `${submission.message}\n\nUsername: ${submission.username}`
@@ -457,7 +460,15 @@ export default async (req, context = {}) => {
   const submissionKey = hmac(
     gatewayKey,
     "contact-submission",
-    JSON.stringify([submission.email, submission.kind, submission.name, description]),
+    JSON.stringify([
+      submission.email,
+      submission.kind,
+      submission.name,
+      description,
+      category,
+      route,
+      subject,
+    ]),
   );
 
   if (isDuplicate(submissionKey)) {
@@ -480,7 +491,7 @@ export default async (req, context = {}) => {
 
   const trustedPayload = {
     app_version: "anewluv-public-site",
-    category: kindConfig.category,
+    category,
     client_key: clientKey,
     correlation_id: correlationId,
     description,
@@ -490,9 +501,9 @@ export default async (req, context = {}) => {
     network_country: String(context?.geo?.country?.code || "").slice(0, 2),
     platform: "web",
     recipient_confirmation_allowed: false,
-    route: kindConfig.route,
+    route,
     source: "public_website",
-    subject: submission.kind === "contact" ? topicConfig.subject : kindConfig.subject,
+    subject,
     submission_key: submissionKey,
   };
   trustedPayload.gateway_signature = hmac(

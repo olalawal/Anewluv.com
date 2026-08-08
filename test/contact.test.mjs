@@ -101,12 +101,14 @@ test("rejects a missing or forged public inquiry type before side effects", asyn
   assert.equal(missing.status, 400);
   assert.equal((await missing.json()).code, "invalid_request");
 
-  const forged = await handler(
-    request({ ...validPayload, topic: "member_support" }),
-    context(),
-  );
-  assert.equal(forged.status, 400);
-  assert.equal((await forged.json()).code, "invalid_request");
+  for (const topic of ["member_support", "__proto__", "constructor", "toString"]) {
+    const forged = await handler(
+      request({ ...validPayload, topic }),
+      context(),
+    );
+    assert.equal(forged.status, 400, topic);
+    assert.equal((await forged.json()).code, "invalid_request");
+  }
   assert.equal(calls.length, 0);
 });
 
@@ -448,6 +450,34 @@ test("labels an advertising request in the trusted subject and description", asy
   );
   assert.equal(body.source, "public_website");
   assert.equal(body.recipient_confirmation_allowed, false);
+  const expectedSubmissionKey = createHmac("sha256", "test-gateway-secret")
+    .update(
+      `contact-submission:v1:${JSON.stringify([
+        body.email,
+        "contact",
+        body.name,
+        body.description,
+        body.category,
+        body.route,
+        body.subject,
+      ])}`,
+    )
+    .digest("hex");
+  assert.equal(body.submission_key, expectedSubmissionKey);
+  const relabeledSubmissionKey = createHmac("sha256", "test-gateway-secret")
+    .update(
+      `contact-submission:v1:${JSON.stringify([
+        body.email,
+        "contact",
+        body.name,
+        body.description,
+        body.category,
+        body.route,
+        "Press inquiry",
+      ])}`,
+    )
+    .digest("hex");
+  assert.notEqual(body.submission_key, relabeledSubmissionKey);
 });
 
 test("uses a dedicated UUID for Turnstile idempotency", async () => {

@@ -48,12 +48,13 @@ authenticates that server-side decision.
 - Accept public Contact subjects only from this fixed set: `General information
   request`, `Advertising inquiry`, `Partnership inquiry`, `Press inquiry`, and
   `Website question`.
-- Recompute `submission_key` from email, request kind, name, and description;
+- Recompute `submission_key` from email, request kind, name, description,
+  category, route, and subject;
   reject a signature whose bound content does not match. Its exact UTF-8 input
   is `contact-submission:v1:<json-array>`, where `<json-array>` is JavaScript
   `JSON.stringify([normalized_lowercase_email, kind, name_or_empty,
-  description])`. Map `/contact-us` to `kind=contact` and `/unsubscribe` to
-  `kind=unsubscribe` before computing it.
+  description, category, route, subject])`. Map `/contact-us` to
+  `kind=contact` and `/unsubscribe` to `kind=unsubscribe` before computing it.
 - Apply the shared Xano actor/content duplicate boundary and the anonymous
   three-attempt hourly rate boundary using the HMAC `client_key`, never the
   Netlify egress IP.
