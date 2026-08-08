@@ -2682,15 +2682,13 @@ function ContactSection({ mode = "contact" }) {
       if (response?.code === "endpoint_unavailable") {
         setSubmitState({
           status: "error",
-          errorMessage:
-            "The contact form is temporarily unavailable. Email admin@anewluv.com directly.",
+          errorMessage: "The contact form is temporarily unavailable. Try again later.",
         });
         return;
       }
       setSubmitState({
         status: "error",
-        errorMessage:
-          "We couldn't send your message right now. Email admin@anewluv.com directly.",
+        errorMessage: "We couldn't send your message right now. Try again later.",
       });
     },
     [
@@ -2719,7 +2717,7 @@ function ContactSection({ mode = "contact" }) {
         </p>
         <div className="hours">
           <strong>Anewluv inquiries</strong>
-          <span>admin@anewluv.com</span>
+          <span>Requests enter the Anewluv Admin Console first.</span>
           <span>Mon-Fri, 9:00 am-5:00 pm</span>
         </div>
       </div>
@@ -2798,7 +2796,7 @@ function ContactSection({ mode = "contact" }) {
         />
         {["unavailable", "error", "expired"].includes(turnstileStatus) ? (
           <p className="form-feedback error">
-            Security verification is unavailable. Email admin@anewluv.com directly.
+            Security verification is unavailable. Try again later.
           </p>
         ) : null}
         {submitState.status === "success" ? (

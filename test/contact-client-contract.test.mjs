@@ -35,4 +35,6 @@ test("public contact UI separates public inquiries from app support and Bug Repo
   }
   assert.match(source, /Member support and Bug Reports belong inside the Anewluv app\./);
   assert.doesNotMatch(source, /Questions about billing, privacy, profile support, or the app/);
+  assert.doesNotMatch(source, /Email admin@anewluv\.com directly/);
+  assert.match(source, /Requests enter the Anewluv Admin Console first\./);
 });
