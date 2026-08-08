@@ -32,15 +32,37 @@ const ALLOWED_FIELDS = new Set([
   "kind",
   "message",
   "name",
+  "topic",
   "turnstile_token",
   "username",
   "website",
 ]);
+const CONTACT_TOPICS = {
+  advertising: {
+    label: "Advertising",
+    subject: "Advertising inquiry",
+  },
+  general_information: {
+    label: "General information",
+    subject: "General information request",
+  },
+  partnership: {
+    label: "Partnership",
+    subject: "Partnership inquiry",
+  },
+  press: {
+    label: "Press",
+    subject: "Press inquiry",
+  },
+  website_question: {
+    label: "Website question",
+    subject: "Website question",
+  },
+};
 const CONTACT_KINDS = {
   contact: {
     category: "general",
     route: "/contact-us",
-    subject: "Website contact request",
   },
   unsubscribe: {
     category: "account_help",
@@ -135,12 +157,16 @@ function validatePayload(payload) {
   const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
   const name = typeof payload.name === "string" ? payload.name.trim() : "";
   const message = typeof payload.message === "string" ? payload.message.trim() : "";
+  const topic = typeof payload.topic === "string" ? payload.topic.trim() : "";
   const username = typeof payload.username === "string" ? payload.username.trim() : "";
   const website = typeof payload.website === "string" ? payload.website.trim() : "";
   const turnstileToken =
     typeof payload.turnstile_token === "string" ? payload.turnstile_token.trim() : "";
 
   if (!CONTACT_KINDS[kind]) return { error: "invalid_request", status: 400 };
+  if (kind === "contact" && !CONTACT_TOPICS[topic]) {
+    return { error: "invalid_request", status: 400 };
+  }
   if (
     !email ||
     email.length > MAX_EMAIL_LENGTH ||
@@ -183,7 +209,16 @@ function validatePayload(payload) {
   }
 
   return {
-    value: { email, kind, message, name, turnstileToken, username, website },
+    value: {
+      email,
+      kind,
+      message,
+      name,
+      topic: kind === "contact" ? topic : "",
+      turnstileToken,
+      username,
+      website,
+    },
   };
 }
 
@@ -410,10 +445,12 @@ export default async (req, context = {}) => {
   }
 
   const kindConfig = CONTACT_KINDS[submission.kind];
-  const description =
-    submission.kind === "unsubscribe" && submission.username
+  const topicConfig = CONTACT_TOPICS[submission.topic];
+  const description = submission.kind === "unsubscribe"
+    ? submission.username
       ? `${submission.message}\n\nUsername: ${submission.username}`
-      : submission.message;
+      : submission.message
+    : `Inquiry type: ${topicConfig.label}\n\n${submission.message}`;
   if (description.length > MAX_MESSAGE_LENGTH) {
     return jsonResponse({ code: "invalid_message" }, 400, correlationId);
   }
@@ -455,7 +492,7 @@ export default async (req, context = {}) => {
     recipient_confirmation_allowed: false,
     route: kindConfig.route,
     source: "public_website",
-    subject: kindConfig.subject,
+    subject: submission.kind === "contact" ? topicConfig.subject : kindConfig.subject,
     submission_key: submissionKey,
   };
   trustedPayload.gateway_signature = hmac(

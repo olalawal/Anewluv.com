@@ -6,6 +6,13 @@ const purchaseCopy =
   "Paid purchases provide access to subscriptions, premium memberships, Hearts in-app credit, and optional digital features delivered inside Anewluv.";
 
 const CONTACT_ENDPOINT = "/api/contact";
+const PUBLIC_INQUIRY_OPTIONS = [
+  ["general_information", "General information"],
+  ["advertising", "Advertising"],
+  ["partnership", "Partnership"],
+  ["press", "Press"],
+  ["website_question", "Website question"],
+];
 const CONTACT_SUBMIT_TIMEOUT_MS = 25000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_MESSAGE_LENGTH = 10;
@@ -2518,9 +2525,9 @@ function UnsubscribePage() {
   return (
     <main className="page">
       <PageHero
-        eyebrow="Account support"
+        eyebrow="Privacy request"
         title="Unsubscribe or request profile removal"
-        body="Use this form for email preferences, profile removal requests, or account support that cannot be handled inside the app."
+        body="Use this form for email preferences or a profile-removal request. For account or app help, use Contact Us inside the Anewluv app."
       />
       <ContactSection mode="unsubscribe" />
     </main>
@@ -2531,9 +2538,9 @@ function ContactPage() {
   return (
     <main className="page">
       <PageHero
-        eyebrow="Support"
+        eyebrow="Contact"
         title="Contact Anewluv"
-        body="Questions about billing, privacy, profile support, or the app can be sent through this form."
+        body="Send general questions, advertising and partnership inquiries, press requests, or questions about this website. Member support and Bug Reports belong inside the Anewluv app."
       />
       <ContactSection />
     </main>
@@ -2556,6 +2563,7 @@ function ContactSection({ mode = "contact" }) {
   const [formState, setFormState] = React.useState({
     name: "",
     email: "",
+    topic: "general_information",
     username: "",
     message: "",
     website: "",
@@ -2572,11 +2580,16 @@ function ContactSection({ mode = "contact" }) {
   const trimmedName = formState.name.trim();
   const trimmedEmail = formState.email.trim();
   const trimmedMessage = formState.message.trim();
+  const selectedTopicLabel =
+    PUBLIC_INQUIRY_OPTIONS.find(([value]) => value === formState.topic)?.[1] ||
+    PUBLIC_INQUIRY_OPTIONS[0][1];
   const trimmedUsername = formState.username.trim();
-  const unsubscribeSuffixLength = isUnsubscribe && trimmedUsername
-    ? `\n\nUsername: ${trimmedUsername}`.length
-    : 0;
-  const messageMaxLength = MAX_MESSAGE_LENGTH - unsubscribeSuffixLength;
+  const serverAddedLength = isUnsubscribe
+    ? trimmedUsername
+      ? `\n\nUsername: ${trimmedUsername}`.length
+      : 0
+    : `Inquiry type: ${selectedTopicLabel}\n\n`.length;
+  const messageMaxLength = MAX_MESSAGE_LENGTH - serverAddedLength;
   const emailLooksValid = isValidEmail(trimmedEmail);
   const messageLengthValid =
     trimmedMessage.length >= MIN_MESSAGE_LENGTH &&
@@ -2617,6 +2630,7 @@ function ContactSection({ mode = "contact" }) {
         kind: isUnsubscribe ? "unsubscribe" : "contact",
         message: trimmedMessage,
         name: trimmedName,
+        topic: isUnsubscribe ? "" : formState.topic,
         turnstile_token: turnstileToken,
         username: trimmedUsername,
         website: formState.website,
@@ -2625,7 +2639,14 @@ function ContactSection({ mode = "contact" }) {
 
       if (response?.ok) {
         setSubmitState({ status: "success", errorMessage: "" });
-        setFormState({ name: "", email: "", username: "", message: "", website: "" });
+        setFormState({
+          name: "",
+          email: "",
+          topic: "general_information",
+          username: "",
+          message: "",
+          website: "",
+        });
         return;
       }
 
@@ -2648,7 +2669,14 @@ function ContactSection({ mode = "contact" }) {
           status: "success",
           errorMessage: "",
         });
-        setFormState({ name: "", email: "", username: "", message: "", website: "" });
+        setFormState({
+          name: "",
+          email: "",
+          topic: "general_information",
+          username: "",
+          message: "",
+          website: "",
+        });
         return;
       }
       if (response?.code === "endpoint_unavailable") {
@@ -2667,6 +2695,7 @@ function ContactSection({ mode = "contact" }) {
     },
     [
       canSubmit,
+      formState.topic,
       formState.username,
       formState.website,
       isUnsubscribe,
@@ -2685,11 +2714,11 @@ function ContactSection({ mode = "contact" }) {
         <h2>{isUnsubscribe ? "Tell us what to remove." : "Drop us a line."}</h2>
         <p>
           {isUnsubscribe
-            ? "Send your valid email address and username so support can review the request."
-            : "Questions about Anewluv, billing, privacy, or profile support can be sent here."}
+            ? "Send your valid email address and username so the privacy request can be reviewed."
+            : "Use this form for information, business inquiries, press, or questions about Anewluv.com."}
         </p>
         <div className="hours">
-          <strong>Anewluv support</strong>
+          <strong>Anewluv inquiries</strong>
           <span>admin@anewluv.com</span>
           <span>Mon-Fri, 9:00 am-5:00 pm</span>
         </div>
@@ -2717,6 +2746,18 @@ function ContactSection({ mode = "contact" }) {
             value={formState.email}
           />
         </label>
+        {!isUnsubscribe ? (
+          <label>
+            Inquiry type
+            <select name="topic" onChange={updateField} value={formState.topic}>
+              {PUBLIC_INQUIRY_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {isUnsubscribe ? (
           <label>
             Username

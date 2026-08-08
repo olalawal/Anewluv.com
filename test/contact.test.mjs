@@ -15,6 +15,7 @@ const validPayload = {
   kind: "contact",
   message: "I need help with my account.",
   name: "Test Person",
+  topic: "general_information",
   turnstile_token: "valid-token",
   username: "",
   website: "",
@@ -84,6 +85,24 @@ test("rejects malformed email and forged trusted fields without side effects", a
 
   const forged = await handler(
     request({ ...validPayload, email_verified: true, user_id: 123 }),
+    context(),
+  );
+  assert.equal(forged.status, 400);
+  assert.equal((await forged.json()).code, "invalid_request");
+  assert.equal(calls.length, 0);
+});
+
+test("rejects a missing or forged public inquiry type before side effects", async () => {
+  const calls = installFetchMock();
+  const missing = await handler(
+    request({ ...validPayload, topic: "" }),
+    context(),
+  );
+  assert.equal(missing.status, 400);
+  assert.equal((await missing.json()).code, "invalid_request");
+
+  const forged = await handler(
+    request({ ...validPayload, topic: "member_support" }),
     context(),
   );
   assert.equal(forged.status, 400);
@@ -405,6 +424,30 @@ test("valid submission forwards only server-controlled metadata to the safe endp
   assert.ok(!("email_verified" in body));
   assert.ok(!("moderation_state" in body));
   assert.ok(!("user_agent" in body));
+});
+
+test("labels an advertising request in the trusted subject and description", async () => {
+  const calls = installFetchMock();
+  const response = await handler(
+    request({
+      ...validPayload,
+      message: "I would like the current advertising information.",
+      topic: "advertising",
+    }),
+    context("203.0.113.26", "req-advertising-valid-1"),
+  );
+
+  assert.equal(response.status, 200);
+  const xanoCall = calls.find((call) => call.href.includes("xano.example"));
+  const body = JSON.parse(xanoCall.options.body);
+  assert.equal(body.category, "general");
+  assert.equal(body.subject, "Advertising inquiry");
+  assert.equal(
+    body.description,
+    "Inquiry type: Advertising\n\nI would like the current advertising information.",
+  );
+  assert.equal(body.source, "public_website");
+  assert.equal(body.recipient_confirmation_allowed, false);
 });
 
 test("uses a dedicated UUID for Turnstile idempotency", async () => {

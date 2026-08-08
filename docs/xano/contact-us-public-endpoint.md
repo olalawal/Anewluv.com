@@ -15,7 +15,7 @@ fail closed until live v1 and its secrets are ready.
 | `email` | text | Required; normalized lowercase email, max 254 |
 | `name` | text | Optional, max 100, single line |
 | `description` | text | Required, 10-2000 |
-| `subject` | text | `Website contact request` or `Unsubscribe request` only |
+| `subject` | text | One server-controlled public inquiry subject or `Unsubscribe request` |
 | `category` | text | `general` or `account_help` only |
 | `source` | text | Must equal `public_website` |
 | `route` | text | `/contact-us` or `/unsubscribe`, matched to category |
@@ -45,6 +45,9 @@ authenticates that server-side decision.
   database or email work.
 - Re-run the email, length, subject/category/route, fixed-source, and fixed-
   platform checks at this boundary.
+- Accept public Contact subjects only from this fixed set: `General information
+  request`, `Advertising inquiry`, `Partnership inquiry`, `Press inquiry`, and
+  `Website question`.
 - Recompute `submission_key` from email, request kind, name, and description;
   reject a signature whose bound content does not match. Its exact UTF-8 input
   is `contact-submission:v1:<json-array>`, where `<json-array>` is JavaScript

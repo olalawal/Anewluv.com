@@ -4964,6 +4964,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   min-height: 52px;
@@ -4980,6 +4981,10 @@ textarea {
   min-height: 138px;
   padding-block: 14px;
   resize: vertical;
+}
+
+select {
+  cursor: pointer;
 }
 
 .contact-honeypot {

@@ -20,3 +20,19 @@ test("browser timeout exceeds the sequential backend request budgets", async () 
   assert.ok(Number.isFinite(turnstileTimeout));
   assert.ok(clientTimeout > xanoTimeout + turnstileTimeout);
 });
+
+test("public contact UI separates public inquiries from app support and Bug Reports", async () => {
+  const source = await readFile(new URL("../src/main.jsx", import.meta.url), "utf8");
+
+  for (const label of [
+    "General information",
+    "Advertising",
+    "Partnership",
+    "Press",
+    "Website question",
+  ]) {
+    assert.match(source, new RegExp(`\\[\"[^\"]+\", \"${label}\"\\]`));
+  }
+  assert.match(source, /Member support and Bug Reports belong inside the Anewluv app\./);
+  assert.doesNotMatch(source, /Questions about billing, privacy, profile support, or the app/);
+});
