@@ -17,10 +17,10 @@ fail closed until live v1 and its secrets are ready.
 | `description` | text | Required, 10-2000 |
 | `subject` | text | `Website contact request` or `Unsubscribe request` only |
 | `category` | text | `general` or `account_help` only |
-| `source` | text | Must equal `anewluv_marketing_site_netlify` |
+| `source` | text | Must equal `public_website` |
 | `route` | text | `/contact-us` or `/unsubscribe`, matched to category |
 | `platform` | text | Must equal `web` |
-| `app_version` | text | Must equal `marketing-site` |
+| `app_version` | text | Must equal `anewluv-public-site` |
 | `correlation_id` | text | Required, max 100, unique |
 | `client_key` | text | Required 64-character lowercase hex HMAC; never a raw IP |
 | `submission_key` | text | Required 64-character lowercase hex HMAC |
@@ -28,8 +28,11 @@ fail closed until live v1 and its secrets are ready.
 | `recipient_confirmation_allowed` | bool | Required and must be false |
 
 Recompute `gateway_signature` with the live v1 `CONTACT_GATEWAY_KEY` over the
-UTF-8 string `contact-gateway:v1:<timestamp>:<correlation_id>:<submission_key>`
+UTF-8 string
+`contact-gateway:v1:<timestamp>:<correlation_id>:<submission_key>:<client_key>`
 and compare it in constant time. The shared secret is never an API input.
+Binding `client_key` prevents a captured request from changing the anonymous
+rate-limit identity during the signature window.
 
 Reject every other input. Do not accept `user_id`, `email_verified`,
 `moderation_state`, `user_agent`, `viewport`, or an anti-bot token from the
@@ -42,17 +45,18 @@ authenticates that server-side decision.
   database or email work.
 - Re-run the email, length, subject/category/route, fixed-source, and fixed-
   platform checks at this boundary.
-- Reject an existing `correlation_id`.
-- Reject an existing `submission_key` created in the previous ten minutes.
-- Limit each `client_key` to three accepted attempts per 180 seconds.
-- Store one `contact_messages` row with `user_id=0`, `email_verified=false`,
-  `status=new`, and server-owned moderation state.
-- Store `correlation_id`, `client_key`, and `submission_key` in indexed columns.
-  Back up the live schema, then add those columns additively before publishing
-  the endpoint.
+- Recompute `submission_key` from email, request kind, name, and description;
+  reject a signature whose bound content does not match.
+- Apply the shared Xano actor/content duplicate boundary and the anonymous
+  three-attempt hourly rate boundary using the HMAC `client_key`, never the
+  Netlify egress IP.
+- Store one accepted `contact_messages` row with `user_id=null`,
+  `email_verified=false`, `status=new`, and server-owned moderation state.
+- Store only irreversible actor/content hashes in the privacy-safe security
+  ledger. Do not persist the gateway signature, raw client key, or rejected body.
 - Send exactly one `admin-contact-us` notification after the row is created.
 - Never run `contact-us-confirm` or any other recipient email for this route.
-- Return `{ ok: true, ticket_id, correlation_id, status: "new" }`.
+- Return `{ id, status: "received" }`.
 
 ## Live v1 verification matrix
 
@@ -61,11 +65,10 @@ authenticates that server-side decision.
 | Missing/wrong/expired gateway assertion | 401; no row; no email |
 | Malformed or oversized email/message | 400; no row; no email |
 | Forged identity/moderation field | 400; no row; no email |
-| Reused correlation ID | 409; one original row only |
-| Reused submission key inside ten minutes | 409; one original row only |
-| Fourth client-key request inside 180 seconds | 429; three rows maximum |
+| Reused actor/content submission inside 24 hours | 409; one original row only |
+| Fourth client-key request inside one hour | 429; three rows maximum |
 | Valid request | 200; one row; one admin email; zero recipient emails |
 
 Capture the live v1 endpoint ID, pre-change backup, request-history IDs, created
-ticket ID, admin email-log ID, and proof that no recipient email-log row
-exists. Add that evidence to PR #7 before owner QA.
+ticket ID, admin email-log ID, and proof that no recipient email-log row exists.
+Add that evidence to PR #8 before owner QA.

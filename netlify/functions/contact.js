@@ -434,7 +434,7 @@ export default async (req, context = {}) => {
   }
 
   const trustedPayload = {
-    app_version: "marketing-site",
+    app_version: "anewluv-public-site",
     category: kindConfig.category,
     client_key: clientKey,
     correlation_id: correlationId,
@@ -446,14 +446,14 @@ export default async (req, context = {}) => {
     platform: "web",
     recipient_confirmation_allowed: false,
     route: kindConfig.route,
-    source: "anewluv_marketing_site_netlify",
+    source: "public_website",
     subject: kindConfig.subject,
     submission_key: submissionKey,
   };
   trustedPayload.gateway_signature = hmac(
     gatewayKey,
     "contact-gateway",
-    `${trustedPayload.gateway_timestamp}:${correlationId}:${submissionKey}`,
+    `${trustedPayload.gateway_timestamp}:${correlationId}:${submissionKey}:${clientKey}`,
   );
 
   try {

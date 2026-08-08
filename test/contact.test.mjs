@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { beforeEach, test } from "node:test";
 
 import handler, {
@@ -18,6 +19,14 @@ const validPayload = {
   username: "",
   website: "",
 };
+
+function gatewaySignature(body, clientKey = body.client_key) {
+  return createHmac("sha256", "test-gateway-secret")
+    .update(
+      `contact-gateway:v1:${body.gateway_timestamp}:${body.correlation_id}:${body.submission_key}:${clientKey}`,
+    )
+    .digest("hex");
+}
 
 function context(ip = "203.0.113.10", requestId = "req-contact-0001") {
   return {
@@ -351,11 +360,14 @@ test("valid submission forwards only server-controlled metadata to the safe endp
   assert.equal(body.subject, "Unsubscribe request");
   assert.equal(body.category, "account_help");
   assert.equal(body.route, "/unsubscribe");
-  assert.equal(body.source, "anewluv_marketing_site_netlify");
+  assert.equal(body.source, "public_website");
+  assert.equal(body.app_version, "anewluv-public-site");
   assert.equal(body.correlation_id, "req-contact-valid-1");
   assert.equal(body.recipient_confirmation_allowed, false);
   assert.match(body.client_key, /^[a-f0-9]{64}$/);
   assert.match(body.gateway_signature, /^[a-f0-9]{64}$/);
+  assert.equal(body.gateway_signature, gatewaySignature(body));
+  assert.notEqual(body.gateway_signature, gatewaySignature(body, "0".repeat(64)));
   assert.equal(typeof body.gateway_timestamp, "number");
   assert.ok(!("gateway_key" in body));
   assert.ok(!JSON.stringify(body).includes("test-gateway-secret"));
