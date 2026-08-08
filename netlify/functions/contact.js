@@ -72,7 +72,7 @@ function jsonResponse(body, status = 200, correlationId = "") {
 }
 
 function securityEvent(event, details = {}) {
-  console.info(JSON.stringify({ event, service: "marketing_contact", ...details }));
+  console.info(JSON.stringify({ event, service: "public_contact", ...details }));
 }
 
 function safeCorrelationId(context) {
@@ -176,9 +176,7 @@ function validatePayload(payload) {
     return { error: "invalid_message", status: 400 };
   }
   if (looksLikeGeneratedFiller(name) && looksLikeGeneratedFiller(message)) {
-    if (kind === "contact" || looksLikeGeneratedFiller(username)) {
-      return { error: "invalid_message", status: 400 };
-    }
+    return { error: "invalid_message", status: 400 };
   }
   if (turnstileToken.length > MAX_TURNSTILE_TOKEN_LENGTH) {
     return { error: "anti_bot_invalid", status: 403 };
@@ -249,7 +247,17 @@ function looksLikeGeneratedFiller(value) {
     const currentUpper = letters[index] === letters[index].toUpperCase();
     if (previousUpper !== currentUpper) transitions += 1;
   }
-  return transitions >= 3;
+  const camelSegments = raw.match(/[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)/g) || [];
+  const camelAverage = camelSegments.length
+    ? letters.length / camelSegments.length
+    : 0;
+  const plausibleCamelPhrase =
+    /^[A-Za-z]+$/.test(raw) &&
+    camelSegments.length >= 2 &&
+    camelSegments.filter((segment) => segment.length >= 3).length >= 2 &&
+    camelAverage >= 2.75;
+
+  return transitions >= 3 && !plausibleCamelPhrase;
 }
 
 function cleanupLocalState(now) {

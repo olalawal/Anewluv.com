@@ -144,7 +144,36 @@ test("rejects the observed mixed-case filler attack before Turnstile or Xano", a
   );
   assert.equal(unsubscribe.status, 400);
   assert.equal((await unsubscribe.json()).code, "invalid_message");
+
+  resetContactSecurityStateForTests();
+  const unsubscribeWithoutUsername = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      message: "qWeRtYuIoPaSdFgHjKlZ",
+      name: "MnBvCxZaSdFgHjKlQwEr",
+      username: "",
+    }),
+    context(),
+  );
+  assert.equal(unsubscribeWithoutUsername.status, 400);
+  assert.equal((await unsubscribeWithoutUsername.json()).code, "invalid_message");
   assert.equal(calls.length, 0);
+});
+
+test("accepts plausible no-space CamelCase support text", async () => {
+  const calls = installFetchMock();
+  const response = await handler(
+    request({
+      ...validPayload,
+      message: "NeedHelpWithMyLogin",
+      name: "MaryJoAnnBell",
+    }),
+    context(),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(calls.filter((call) => call.href.includes("xano.example")).length, 1);
 });
 
 test("rejects small mutations of the observed filler signature", async () => {

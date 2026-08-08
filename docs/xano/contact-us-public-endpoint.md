@@ -46,7 +46,11 @@ authenticates that server-side decision.
 - Re-run the email, length, subject/category/route, fixed-source, and fixed-
   platform checks at this boundary.
 - Recompute `submission_key` from email, request kind, name, and description;
-  reject a signature whose bound content does not match.
+  reject a signature whose bound content does not match. Its exact UTF-8 input
+  is `contact-submission:v1:<json-array>`, where `<json-array>` is JavaScript
+  `JSON.stringify([normalized_lowercase_email, kind, name_or_empty,
+  description])`. Map `/contact-us` to `kind=contact` and `/unsubscribe` to
+  `kind=unsubscribe` before computing it.
 - Apply the shared Xano actor/content duplicate boundary and the anonymous
   three-attempt hourly rate boundary using the HMAC `client_key`, never the
   Netlify egress IP.
