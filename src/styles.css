@@ -4964,6 +4964,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   min-height: 52px;
@@ -4980,6 +4981,25 @@ textarea {
   min-height: 138px;
   padding-block: 14px;
   resize: vertical;
+}
+
+select {
+  cursor: pointer;
+}
+
+.contact-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.turnstile-widget {
+  min-height: 65px;
+  width: 100%;
 }
 
 .form-feedback {

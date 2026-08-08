@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
@@ -86,7 +87,13 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://localhost:${PORT}`);
     if (url.pathname === "/api/contact") {
       const body = await readBody(req);
-      return sendWebResponse(res, await contactHandler(toRequest(req, body)));
+      return sendWebResponse(
+        res,
+        await contactHandler(toRequest(req, body), {
+          ip: req.socket.remoteAddress || "local-client",
+          requestId: `local-${randomUUID()}`,
+        }),
+      );
     }
     if (url.pathname === "/api/app-preview") {
       const body = await readBody(req);
