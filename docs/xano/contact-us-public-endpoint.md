@@ -1,8 +1,10 @@
 # Xano contract: `POST /feedback/contact_us_public`
 
-This is the backend deployment artifact for Anewluv.com issue #7. Build and
-test it on a dedicated Xano branch. Production remains unchanged until owner
-QA approves the Netlify deploy preview and the Xano branch evidence.
+This is the backend deployment artifact for Anewluv.com issue #7. This project
+uses the live v1 API rather than Xano branches. Build and test the complete
+XanoScript artifact locally, back up and compare the current live endpoint,
+then apply it to live v1 only after owner approval. The Netlify gateway remains
+fail closed until live v1 and its secrets are ready.
 
 ## Inputs
 
@@ -25,7 +27,7 @@ QA approves the Netlify deploy preview and the Xano branch evidence.
 | `network_country` | text | Optional two-letter country code |
 | `recipient_confirmation_allowed` | bool | Required and must be false |
 
-Recompute `gateway_signature` with the branch `CONTACT_GATEWAY_KEY` over the
+Recompute `gateway_signature` with the live v1 `CONTACT_GATEWAY_KEY` over the
 UTF-8 string `contact-gateway:v1:<timestamp>:<correlation_id>:<submission_key>`
 and compare it in constant time. The shared secret is never an API input.
 
@@ -46,12 +48,13 @@ authenticates that server-side decision.
 - Store one `contact_messages` row with `user_id=0`, `email_verified=false`,
   `status=new`, and server-owned moderation state.
 - Store `correlation_id`, `client_key`, and `submission_key` in indexed columns.
-  Add those columns additively on the Xano branch before publishing the API.
+  Back up the live schema, then add those columns additively before publishing
+  the endpoint.
 - Send exactly one `admin-contact-us` notification after the row is created.
 - Never run `contact-us-confirm` or any other recipient email for this route.
 - Return `{ ok: true, ticket_id, correlation_id, status: "new" }`.
 
-## Branch verification matrix
+## Live v1 verification matrix
 
 | Case | Expected result |
 | --- | --- |
@@ -63,6 +66,6 @@ authenticates that server-side decision.
 | Fourth client-key request inside 180 seconds | 429; three rows maximum |
 | Valid request | 200; one row; one admin email; zero recipient emails |
 
-Capture the Xano branch name, endpoint ID, request-history IDs, created ticket
-ID, admin email-log ID, and proof that no recipient email-log row exists. Add
-that evidence to PR #7 before owner QA.
+Capture the live v1 endpoint ID, pre-change backup, request-history IDs, created
+ticket ID, admin email-log ID, and proof that no recipient email-log row
+exists. Add that evidence to PR #7 before owner QA.

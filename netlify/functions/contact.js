@@ -10,6 +10,8 @@ const MIN_MESSAGE_LENGTH = 10;
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_USERNAME_LENGTH = 80;
 const MAX_TURNSTILE_TOKEN_LENGTH = 2048;
+const MAX_MESSAGE_URLS = 2;
+const MAX_DECODE_PASSES = 5;
 const LOCAL_RATE_WINDOW_MS = 180_000;
 const LOCAL_RATE_LIMIT = 3;
 const DUPLICATE_WINDOW_MS = 10 * 60_000;
@@ -20,6 +22,11 @@ const TURNSTILE_VERIFY_URL =
 const PUBLIC_CONTACT_PATH = "/feedback/contact_us_public";
 const EMAIL_RE =
   /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
+const CONTROL_CHAR_RE =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+const DANGEROUS_CONTENT_RE =
+  /\b(?:javascript|vbscript)\s*:|\bdata\s*:\s*(?:text\/html|application\/(?:javascript|x-javascript))|\bfile\s*:\/\/|<\s*\/?\s*[a-z][^>]*>|\{\{[^}]+\}\}|\$\{[^}]+\}|(?:'|%27)\s*or\s+(?:1=1|'[^']*'='[^']*)/i;
+const URL_RE = /(?:https?:\/\/|www\.)/gi;
 const ALLOWED_FIELDS = new Set([
   "email",
   "kind",
@@ -146,16 +153,32 @@ function validatePayload(payload) {
     name.length > MAX_NAME_LENGTH ||
     username.length > MAX_USERNAME_LENGTH ||
     /[\u0000\r\n]/.test(name) ||
-    /[\u0000\r\n]/.test(username)
+    /[\u0000\r\n]/.test(username) ||
+    hasDangerousContent(name) ||
+    hasDangerousContent(username)
   ) {
     return { error: "invalid_request", status: 400 };
   }
   if (
     message.length < MIN_MESSAGE_LENGTH ||
     message.length > MAX_MESSAGE_LENGTH ||
-    message.includes("\u0000")
+    CONTROL_CHAR_RE.test(message)
   ) {
     return { error: "invalid_message", status: 400 };
+  }
+  const messageInspection = inspectText(message);
+  const urlCount = messageInspection.text.match(URL_RE)?.length || 0;
+  if (
+    messageInspection.encodingIncomplete ||
+    urlCount > MAX_MESSAGE_URLS ||
+    DANGEROUS_CONTENT_RE.test(messageInspection.text)
+  ) {
+    return { error: "invalid_message", status: 400 };
+  }
+  if (looksLikeGeneratedFiller(name) && looksLikeGeneratedFiller(message)) {
+    if (kind === "contact" || looksLikeGeneratedFiller(username)) {
+      return { error: "invalid_message", status: 400 };
+    }
   }
   if (turnstileToken.length > MAX_TURNSTILE_TOKEN_LENGTH) {
     return { error: "anti_bot_invalid", status: 403 };
@@ -164,6 +187,69 @@ function validatePayload(payload) {
   return {
     value: { email, kind, message, name, turnstileToken, username, website },
   };
+}
+
+function inspectText(value) {
+  let inspected = String(value || "").normalize("NFKC");
+  for (let attempt = 0; attempt < MAX_DECODE_PASSES; attempt += 1) {
+    const escapedMalformedPercents = inspected.replace(/%(?![0-9a-f]{2})/gi, "%25");
+    let decoded = "";
+    try {
+      decoded = decodeURIComponent(escapedMalformedPercents).normalize("NFKC");
+    } catch {
+      decoded = escapedMalformedPercents
+        .replace(/%([0-7][0-9a-f])/gi, (_match, hex) =>
+          String.fromCharCode(Number.parseInt(hex, 16)),
+        )
+        .normalize("NFKC");
+    }
+    if (decoded === inspected) {
+      return {
+        encodingIncomplete: /%[0-9a-f]{2}/i.test(inspected),
+        text: inspected,
+      };
+    }
+    inspected = decoded;
+  }
+  return {
+    encodingIncomplete: /%[0-9a-f]{2}/i.test(inspected),
+    text: inspected,
+  };
+}
+
+function hasDangerousContent(value) {
+  const inspection = inspectText(value);
+  return inspection.encodingIncomplete || DANGEROUS_CONTENT_RE.test(inspection.text);
+}
+
+function looksLikeGeneratedFiller(value) {
+  const raw = String(value || "");
+  if (/\s/.test(raw)) return false;
+  const compact = raw.replace(/[^A-Za-z0-9]/g, "");
+  if (!/^[A-Za-z0-9]{12,32}$/.test(compact)) {
+    return false;
+  }
+
+  const letters = [...compact].filter((character) => /[A-Za-z]/.test(character));
+  const upperCount = letters.filter((character) => character === character.toUpperCase()).length;
+  const lowerCount = letters.length - upperCount;
+  if (
+    letters.length < 10 ||
+    upperCount < 4 ||
+    lowerCount < 4 ||
+    Math.min(upperCount, lowerCount) / letters.length < 0.25 ||
+    new Set(compact.toLowerCase()).size < 8
+  ) {
+    return false;
+  }
+
+  let transitions = 0;
+  for (let index = 1; index < letters.length; index += 1) {
+    const previousUpper = letters[index - 1] === letters[index - 1].toUpperCase();
+    const currentUpper = letters[index] === letters[index].toUpperCase();
+    if (previousUpper !== currentUpper) transitions += 1;
+  }
+  return transitions >= 3;
 }
 
 function cleanupLocalState(now) {

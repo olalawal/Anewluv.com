@@ -7,6 +7,8 @@ import handler, {
 } from "../netlify/functions/contact.js";
 
 const ORIGINAL_FETCH = globalThis.fetch;
+const encodeThreeTimes = (value) =>
+  encodeURIComponent(encodeURIComponent(encodeURIComponent(value)));
 const validPayload = {
   email: "Person@Example.com",
   kind: "contact",
@@ -105,6 +107,154 @@ test("honeypot submissions create no ticket or email", async () => {
   assert.equal(response.status, 202);
   assert.equal((await response.json()).ok, true);
   assert.equal(calls.length, 0);
+});
+
+test("rejects the observed mixed-case filler attack before Turnstile or Xano", async () => {
+  const calls = installFetchMock();
+  const contact = await handler(
+    request({
+      ...validPayload,
+      message: "aBcDeFgHiJkLmNoPqRsT",
+      name: "ZaQwSxEdCrFvTgByHnUj",
+    }),
+    context(),
+  );
+  assert.equal(contact.status, 400);
+  assert.equal((await contact.json()).code, "invalid_message");
+
+  resetContactSecurityStateForTests();
+  const unsubscribe = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      message: "qWeRtYuIoPaSdFgHjKlZ",
+      name: "MnBvCxZaSdFgHjKlQwEr",
+      username: "PoIuYtReWqAsDfGhJkLz",
+    }),
+    context(),
+  );
+  assert.equal(unsubscribe.status, 400);
+  assert.equal((await unsubscribe.json()).code, "invalid_message");
+  assert.equal(calls.length, 0);
+});
+
+test("rejects small mutations of the observed filler signature", async () => {
+  const calls = installFetchMock();
+  const mutations = [
+    ["ZaQwSxEdCrFvTgB", "aBcDeFgHiJkLmNo"],
+    ["ZaQwSxEdCrFvTgByHnUjKlmNo", "aBcDeFgHiJkLmNoPqRsTuVwXy"],
+    ["ZaQwSxEdCrFvTgByHnUj1", "aBcDeFgHiJkLmNoPqRsT1"],
+    ["ZaQwSxEd-CrFvTgByHnUj", "aBcDeFg-HiJkLmNoPqRsT"],
+  ];
+
+  for (const [index, [name, message]] of mutations.entries()) {
+    resetContactSecurityStateForTests();
+    const response = await handler(
+      request({ ...validPayload, name, message, turnstile_token: `mutation-${index}` }),
+      context(`203.0.113.${index + 40}`),
+    );
+    assert.equal(response.status, 400, `${name} / ${message}`);
+    assert.equal((await response.json()).code, "invalid_message");
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("rejects dangerous or excessive URLs before Turnstile or Xano", async () => {
+  const calls = installFetchMock();
+  const attacks = [
+    "javascript:alert(document.cookie)",
+    "%3Cscript%3Ealert(1)%3C%2Fscript%3E",
+    "%3Cscript%3Ealert(1)%3C%2Fscript%3E stray%",
+    "${process.env.SECRET} please help",
+    "https://one.invalid https://two.invalid https://three.invalid",
+    "https%3A%2F%2Fone.invalid https%3A%2F%2Ftwo.invalid https%3A%2F%2Fthree.invalid",
+    "https://one.invalid,https://two.invalid,https://three.invalid",
+    encodeThreeTimes("<script>alert(1)</script>"),
+    ["https://one.invalid", "https://two.invalid", "https://three.invalid"]
+      .map(encodeThreeTimes)
+      .join(" "),
+    "Unable to upload the screenshot %FF after signup.",
+    "person@example.com' OR 1=1 -- account help",
+  ];
+
+  for (const [index, message] of attacks.entries()) {
+    resetContactSecurityStateForTests();
+    const response = await handler(
+      request({ ...validPayload, message, turnstile_token: `attack-${index}` }),
+      context(`203.0.113.${index + 20}`),
+    );
+    assert.equal(response.status, 400, message);
+    assert.equal((await response.json()).code, "invalid_message");
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("rejects dangerous content in name and unsubscribe username", async () => {
+  const calls = installFetchMock();
+  const unsafeName = await handler(
+    request({ ...validPayload, name: "<script>alert(1)</script>" }),
+    context(),
+  );
+  assert.equal(unsafeName.status, 400);
+  assert.equal((await unsafeName.json()).code, "invalid_request");
+
+  resetContactSecurityStateForTests();
+  const unsafeUsername = await handler(
+    request({
+      ...validPayload,
+      kind: "unsubscribe",
+      username: "${process.env.SECRET}",
+    }),
+    context(),
+  );
+  assert.equal(unsafeUsername.status, 400);
+  assert.equal((await unsafeUsername.json()).code, "invalid_request");
+  assert.equal(calls.length, 0);
+});
+
+test("allows a human support message containing one ordinary https URL", async () => {
+  const calls = installFetchMock();
+  const response = await handler(
+    request({
+      ...validPayload,
+      message: "My profile shows an error at https://anewluv.com/help when I sign in.",
+    }),
+    context(),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(calls.filter((call) => call.href.includes("xano.example")).length, 1);
+});
+
+test("allows ordinary file and onboarding support language", async () => {
+  const calls = installFetchMock();
+  const messages = [
+    "File: the app screenshot will not upload from My Photos.",
+    "Onboarding = stuck after I choose my city and press Continue.",
+  ];
+
+  for (const [index, message] of messages.entries()) {
+    resetContactSecurityStateForTests();
+    const response = await handler(
+      request({ ...validPayload, message, turnstile_token: `normal-${index}` }),
+      context(`203.0.113.${index + 60}`),
+    );
+    assert.equal(response.status, 200, message);
+  }
+  assert.equal(calls.filter((call) => call.href.includes("xano.example")).length, 2);
+});
+
+test("allows plausible multi-word human names and messages", async () => {
+  const calls = installFetchMock();
+  const response = await handler(
+    request({
+      ...validPayload,
+      name: "Mary Jo Ann Bell McKay",
+      message: "Please Help My Bad Login",
+    }),
+    context(),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(calls.filter((call) => call.href.includes("xano.example")).length, 1);
 });
 
 test("rejects an oversized body", async () => {

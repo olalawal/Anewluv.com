@@ -41,12 +41,14 @@ The preview hostname must be allowed by both the preview Turnstile widget and
 `TURNSTILE_ALLOWED_HOSTNAMES`. A missing secret produces `503` and no Xano
 request. An invalid or missing token produces `403` and no Xano request.
 
-## Backend branch dependency
+## Live v1 backend deployment
 
-Create a dedicated Xano branch for issue #7. Implement the contract in
-[`docs/xano/contact-us-public-endpoint.md`](xano/contact-us-public-endpoint.md),
-then verify it on that branch before changing the Netlify preview base URL to
-the branch endpoint. Do not modify the existing production endpoint in place.
+This project does not use Xano branches. Implement the contract in
+[`docs/xano/contact-us-public-endpoint.md`](xano/contact-us-public-endpoint.md)
+as a complete local XanoScript artifact first. Back up and compare the current
+live v1 endpoint, apply the reviewed artifact to live v1 only after owner
+approval, and immediately run the rejection and accepted-request matrix. Keep
+the Netlify function fail closed until that endpoint and its secrets are ready.
 
 ## Verification
 
@@ -57,10 +59,13 @@ npm test
 npm run build
 ```
 
-On the Netlify deploy preview, verify one successful Contact submission and one
-Unsubscribe submission. Confirm each creates one `contact_messages` row and
-one admin notification, while `email_send_log` contains no
-`contact-us-confirm` row for the submitted address.
+On the Netlify deploy preview, replay the observed mixed-case filler payloads,
+URL and markup injection, duplicate submissions, and a four-request burst.
+Every rejected case must create zero `contact_messages` rows and zero emails.
+Then verify one successful anonymous Contact submission and one Unsubscribe
+submission. Confirm each creates one Admin Console row and one admin
+notification, while `email_send_log` contains no `contact-us-confirm` row for
+the submitted address.
 
 Use the preview's function logs to search the returned `X-Correlation-Id`.
 Logs contain the correlation ID and HMAC client key, never the raw email,
