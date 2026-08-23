@@ -28,6 +28,8 @@ const APP_PREVIEW_ENDPOINT = "/api/app-preview";
 const THEME_STORAGE_KEY = "anewluv-site-theme";
 const COOKIE_STORAGE_KEY = "anewluv-site-cookie-ok";
 const APP_PREVIEW_CACHE_PREFIX = "anewluv-site-preview:";
+const MAX_PUBLIC_PREVIEW_PROFILES = 20;
+const MAX_PERSONAL_PREVIEW_PROFILES = 1;
 const USE_LIVE_APP_EMBEDS = import.meta.env.VITE_ANEWLUV_LIVE_APP_EMBEDS === "true";
 const USE_LIVE_HOME_EMBED = import.meta.env.VITE_ANEWLUV_LIVE_HOME_EMBED !== "false";
 const APP_PREVIEW_MODE = import.meta.env.VITE_ANEWLUV_APP_PREVIEW_MODE || "internal-iframes";
@@ -1090,11 +1092,11 @@ function normalizeDiscoverPreview(payload) {
     pricing: "/pricing",
   };
   const profiles = Array.isArray(payload?.profiles)
-    ? payload.profiles.map(normalizePreviewProfile).filter(Boolean).slice(0, 8)
+    ? payload.profiles.map(normalizePreviewProfile).filter(Boolean).slice(0, MAX_PUBLIC_PREVIEW_PROFILES)
     : [];
   const previewProfiles = Array.isArray(payload?.previewProfiles)
-    ? payload.previewProfiles.map(normalizePreviewProfile).filter(Boolean).slice(0, 8)
-    : profiles;
+    ? payload.previewProfiles.map(normalizePreviewProfile).filter(Boolean).slice(0, MAX_PERSONAL_PREVIEW_PROFILES)
+    : profiles.slice(1, 1 + MAX_PERSONAL_PREVIEW_PROFILES);
 
   return {
     generatedAt: payload?.generatedAt || "",
@@ -1323,6 +1325,9 @@ function HeartSvg({ profile, id }) {
 function AppShowcase({ onHeartSelect, preview }) {
   const links = preview.links || defaultPreviewLinks;
   const profiles = preview.profiles || [];
+  const personalProfiles = preview.previewProfiles?.length
+    ? preview.previewProfiles
+    : profiles.slice(1, 1 + MAX_PERSONAL_PREVIEW_PROFILES);
   const frames = [
     {
       className: "discover-preview",
@@ -1346,6 +1351,7 @@ function AppShowcase({ onHeartSelect, preview }) {
       href: links.myProfile || links.editProfile,
       label: "My Profile",
       loading: "lazy",
+      profiles: personalProfiles.length ? personalProfiles : profiles,
       surfaceKey: "profile",
       title: "Anewluv My Profile app page",
     },
@@ -1358,7 +1364,7 @@ function AppShowcase({ onHeartSelect, preview }) {
         <PhoneFrame
           {...frame}
           key={frame.label}
-          profiles={profiles}
+          profiles={frame.profiles || profiles}
         />
       ))}
     </div>
@@ -1473,12 +1479,18 @@ function PreviewFramePage({ screenKey }) {
     appTourItems.find((entry) => entry.variant === variant || screenShotSlug(entry.variant, entry.label) === screenKey) ||
     appTourItems.find((entry) => entry.type === "phone") ||
     {};
+  const personalProfiles = preview.previewProfiles?.length
+    ? preview.previewProfiles
+    : preview.profiles.slice(1, 1 + MAX_PERSONAL_PREVIEW_PROFILES);
+  const frameProfiles = isPersonalPreviewVariant(variant)
+    ? (personalProfiles.length ? personalProfiles : preview.profiles)
+    : preview.profiles;
 
   return (
     <main className={`preview-frame-page${highDensity ? " high-density-preview" : ""}`}>
       <AppSurfacePreview
         label={item.label || variant}
-        profiles={preview.profiles}
+        profiles={frameProfiles}
         variant={variant}
       />
     </main>
@@ -2088,7 +2100,9 @@ function isPersonalPreviewVariant(variant = "") {
 }
 
 function AppExperienceSection({ links, previewProfiles = [], profiles, screens = [] }) {
-  const personalProfiles = profiles.length ? profiles : previewProfiles;
+  const personalProfiles = previewProfiles.length
+    ? previewProfiles
+    : profiles.slice(1, 1 + MAX_PERSONAL_PREVIEW_PROFILES);
   const screenByKey = new Map(
     screens
       .filter((screen) => screen?.key)

@@ -1,8 +1,10 @@
 const DEFAULT_APP_BASE_URL = "https://app.anewluv.com";
 const REQUEST_TIMEOUT_MS = 8000;
-const MAX_FEED_ITEMS = 12;
+const MAX_FEED_ITEMS = 20;
 const MAX_PERSONAL_PREVIEW_ITEMS = 1;
+const MAX_PREVIEW_ACCOUNT_ATTEMPTS = 3;
 const DISCOVER_PAGE_SIZE = 50;
+const DISCOVER_RANDOM_PAGE_MAX = 60;
 const SEED_EMAIL_PATTERN = /^seed\d+@seed\.anewluv\.test$/i;
 const PREVIEW_SCREEN_DEFS = [
   ["discover", "Discover", "/DiscoverScreen"],
@@ -18,6 +20,7 @@ const PREVIEW_SCREEN_DEFS = [
   ["upgrade", "Upgrade", "/InAppScreen"],
   ["entitlements", "Entitlements", "/InAppScreen"],
 ];
+const authTokenCache = new Map();
 
 function env(name) {
   return globalThis.Netlify?.env?.get(name) ?? process.env[name] ?? "";
@@ -268,6 +271,11 @@ async function getAuthToken(authBaseUrl, account) {
   const password = account?.password;
 
   if (!authBaseUrl || !email || !password) return "";
+  const cacheKey = `${authBaseUrl}:${email}`;
+  const cached = authTokenCache.get(cacheKey);
+  if (cached?.token && cached.expiresAt > Date.now()) {
+    return cached.token;
+  }
 
   const login = await fetchJson(`${authBaseUrl}/auth/login`, {
     body: JSON.stringify({ email, password }),
@@ -278,7 +286,14 @@ async function getAuthToken(authBaseUrl, account) {
     method: "POST",
   });
 
-  return login?.authToken || login?.auth_token || login?.token || "";
+  const token = login?.authToken || login?.auth_token || login?.token || "";
+  if (token) {
+    authTokenCache.set(cacheKey, {
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      token,
+    });
+  }
+  return token;
 }
 
 function absolutizeAsset(url, assetOrigin) {
@@ -363,6 +378,11 @@ function shuffleSeeded(items, seed = "") {
   return next;
 }
 
+function previewPageNumbers(seed = "") {
+  const random = seededRandom(`${seed}:pages`);
+  return [1 + Math.floor(random() * DISCOVER_RANDOM_PAGE_MAX)];
+}
+
 function previewLocationText(...sources) {
   for (const source of sources) {
     const direct = firstString(source?.locationText, source?.location_text, source?.location);
@@ -403,6 +423,22 @@ function selectPreviewAccount(accounts, sessionId, visitorLocation) {
   const bestScore = Math.max(...scored.map((item) => item.score));
   const pool = bestScore > 0 ? scored.filter((item) => item.score === bestScore).map((item) => item.account) : accounts;
   return pickSeeded(pool, sessionId || previewLocationText(visitorLocation));
+}
+
+function samePreviewAccount(left, right) {
+  return Boolean(left?.email && right?.email && left.email === right.email);
+}
+
+function orderedPreviewAccounts(accounts, sessionId, visitorLocation) {
+  if (!accounts.length) return [null];
+  const primary = selectPreviewAccount(accounts, sessionId, visitorLocation);
+  const ordered = [];
+  for (const account of [primary, accounts[0], ...shuffleSeeded(accounts, `${sessionId}:accounts`)]) {
+    if (!account || ordered.some((existing) => samePreviewAccount(existing, account))) continue;
+    ordered.push(account);
+    if (ordered.length >= MAX_PREVIEW_ACCOUNT_ATTEMPTS) break;
+  }
+  return ordered;
 }
 
 function headerText(headers, names) {
@@ -681,10 +717,35 @@ function uniqueItemsById(items) {
   });
 }
 
-async function loadSearchItems(discoverBaseUrl, authHeaders, visitorLocation, previewAccount) {
+async function loadSearchItems(discoverBaseUrl, authHeaders, visitorLocation, previewAccount, sessionId = "") {
   const locationText = previewLocationText(visitorLocation, previewAccount);
+  const pages = previewPageNumbers(`${sessionId}:search`);
   try {
-    const search = await fetchJson(`${discoverBaseUrl}/search/quick`, {
+    const results = await Promise.allSettled(
+      pages.map((page) =>
+        fetchJson(`${discoverBaseUrl}/search/quick`, {
+          body: JSON.stringify({
+            age_max: 99,
+            age_min: 18,
+            distance_miles: 1000,
+            filter_mode: "all",
+            interested_in: "both",
+            interested_in_gender_ids: [1, 2, 3],
+            location_text: locationText,
+            page,
+            page_size: DISCOVER_PAGE_SIZE,
+            sort_mode: "distance_asc",
+          }),
+          headers: authHeaders,
+          method: "POST",
+        }),
+      ),
+    );
+    const items = uniqueItemsById(
+      results.flatMap((result) => publicDiscoveryItems(result.status === "fulfilled" ? result.value?.items : [])),
+    );
+    if (items.length || pages.includes(1)) return items;
+    const firstPage = await fetchJson(`${discoverBaseUrl}/search/quick`, {
       body: JSON.stringify({
         age_max: 99,
         age_min: 18,
@@ -700,32 +761,47 @@ async function loadSearchItems(discoverBaseUrl, authHeaders, visitorLocation, pr
       headers: authHeaders,
       method: "POST",
     });
-    return uniqueItemsById(publicDiscoveryItems(search?.items));
+    return uniqueItemsById(publicDiscoveryItems(firstPage?.items));
   } catch {
     return [];
   }
 }
 
-async function loadFeedItems(discoverBaseUrl, authHeaders) {
+async function loadFeedItems(discoverBaseUrl, authHeaders, sessionId = "") {
+  const pages = previewPageNumbers(`${sessionId}:feed`);
   try {
-    const feed = await fetchJson(`${discoverBaseUrl}/discover/feed?page=1&page_size=${DISCOVER_PAGE_SIZE}`, {
+    const results = await Promise.allSettled(
+      pages.map((page) =>
+        fetchJson(`${discoverBaseUrl}/discover/feed?page=${page}&page_size=${DISCOVER_PAGE_SIZE}`, {
+          headers: authHeaders,
+        }),
+      ),
+    );
+    const items = uniqueItemsById(
+      results.flatMap((result) => publicDiscoveryItems(result.status === "fulfilled" ? result.value?.items : [])),
+    );
+    if (items.length || pages.includes(1)) return items;
+    const firstPage = await fetchJson(`${discoverBaseUrl}/discover/feed?page=1&page_size=${DISCOVER_PAGE_SIZE}`, {
       headers: authHeaders,
     });
-    return uniqueItemsById(publicDiscoveryItems(feed?.items));
+    return uniqueItemsById(publicDiscoveryItems(firstPage?.items));
   } catch {
     return [];
   }
 }
 
-async function loadDiscoverPreview({ appBaseUrl, assetOrigin, authBaseUrl, discoverBaseUrl, sessionId = "", visitorLocation }) {
-  if (!discoverBaseUrl) {
-    return fallbackPreviewPayload(appBaseUrl, "fallback-unconfigured");
-  }
-
-  const previewAccount = selectPreviewAccount(parsePreviewAccounts(), sessionId, visitorLocation);
+async function loadDiscoverPreviewForAccount({
+  appBaseUrl,
+  assetOrigin,
+  authBaseUrl,
+  discoverBaseUrl,
+  previewAccount,
+  sessionId = "",
+  visitorLocation,
+}) {
   const token = await getAuthToken(authBaseUrl, previewAccount);
   if (!token) {
-    return fallbackPreviewPayload(appBaseUrl, "fallback-auth");
+    return null;
   }
 
   const authHeaders = {
@@ -735,26 +811,25 @@ async function loadDiscoverPreview({ appBaseUrl, assetOrigin, authBaseUrl, disco
   };
   const allowedIds = allowedPreviewProfileIds();
   let source = "live-search";
-  let items = await loadSearchItems(discoverBaseUrl, authHeaders, visitorLocation, previewAccount);
+  let items = await loadSearchItems(discoverBaseUrl, authHeaders, visitorLocation, previewAccount, sessionId);
   let publicItems = shuffleSeeded(
     items,
     `${sessionId}:search`,
-  ).slice(0, MAX_FEED_ITEMS);
+  ).slice(0, MAX_FEED_ITEMS + MAX_PERSONAL_PREVIEW_ITEMS);
   if (!publicItems.length) {
     source = "live";
-    items = await loadFeedItems(discoverBaseUrl, authHeaders);
-    publicItems = shuffleSeeded(items, `${sessionId}:feed`).slice(0, MAX_FEED_ITEMS);
+    items = await loadFeedItems(discoverBaseUrl, authHeaders, sessionId);
+    publicItems = shuffleSeeded(items, `${sessionId}:feed`).slice(0, MAX_FEED_ITEMS + MAX_PERSONAL_PREVIEW_ITEMS);
   }
   const previewItems = isSeedPreviewAccount(previewAccount)
     ? shuffleSeeded(personalPreviewItems(items, allowedIds), `${sessionId}:preview`).slice(0, MAX_PERSONAL_PREVIEW_ITEMS)
     : [];
 
-  const profiles = publicItems
+  const publicProfilePool = publicItems
     .map((item) =>
       publicProfileFromItem(item, null, appBaseUrl, assetOrigin),
     )
-    .filter(Boolean)
-    .slice(0, MAX_FEED_ITEMS);
+    .filter(Boolean);
   const previewProfiles = previewItems
     .map((item) =>
       publicProfileFromItem(item, null, appBaseUrl, assetOrigin),
@@ -763,12 +838,22 @@ async function loadDiscoverPreview({ appBaseUrl, assetOrigin, authBaseUrl, disco
     .filter((profile) => !allowedIds.size || allowedIds.has(String(profile.id)))
     .slice(0, MAX_PERSONAL_PREVIEW_ITEMS);
 
-  if (!profiles.length) {
-    return fallbackPreviewPayload(appBaseUrl, "fallback-empty");
+  if (!publicProfilePool.length) {
+    return null;
   }
+  const fallbackFrameProfiles = publicProfilePool.slice(1, 1 + MAX_PERSONAL_PREVIEW_ITEMS);
   const frameProfiles = previewProfiles.length
     ? previewProfiles
-    : profiles.slice(0, MAX_PERSONAL_PREVIEW_ITEMS);
+    : fallbackFrameProfiles.length
+      ? fallbackFrameProfiles
+      : publicProfilePool.slice(0, MAX_PERSONAL_PREVIEW_ITEMS);
+  const frameProfileIds = new Set(frameProfiles.map((profile) => String(profile.id)).filter(Boolean));
+  const profiles = publicProfilePool
+    .filter((profile) => !frameProfileIds.has(String(profile.id)))
+    .slice(0, MAX_FEED_ITEMS);
+  if (!profiles.length) {
+    return null;
+  }
 
   return {
     source,
@@ -778,6 +863,32 @@ async function loadDiscoverPreview({ appBaseUrl, assetOrigin, authBaseUrl, disco
     previewProfiles: frameProfiles,
     screens: previewScreens(appBaseUrl, frameProfiles),
   };
+}
+
+async function loadDiscoverPreview({ appBaseUrl, assetOrigin, authBaseUrl, discoverBaseUrl, sessionId = "", visitorLocation }) {
+  if (!discoverBaseUrl) {
+    return fallbackPreviewPayload(appBaseUrl, "fallback-unconfigured");
+  }
+
+  const previewAccounts = orderedPreviewAccounts(parsePreviewAccounts(), sessionId, visitorLocation);
+  for (const previewAccount of previewAccounts) {
+    try {
+      const payload = await loadDiscoverPreviewForAccount({
+        appBaseUrl,
+        assetOrigin,
+        authBaseUrl,
+        discoverBaseUrl,
+        previewAccount,
+        sessionId,
+        visitorLocation,
+      });
+      if (payload) return payload;
+    } catch {
+      // Try the next configured preview account before falling back.
+    }
+  }
+
+  return fallbackPreviewPayload(appBaseUrl, "fallback-empty");
 }
 
 export default async (req) => {
