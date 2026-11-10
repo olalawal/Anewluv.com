@@ -1,0 +1,33 @@
+{
+  // anewluv.com on Cloudflare: one Worker with static assets.
+  // Build first (npm run build), then `npx wrangler deploy`.
+  // Secrets are never written here. Enter them in the Cloudflare dashboard or
+  // with `npx wrangler secret put <NAME>`; the names are in .env.example.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "anewluv-marketing",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-10-31",
+  // contact.js uses node:crypto; nodejs_compat also fills process.env.
+  "compatibility_flags": ["nodejs_compat"],
+  // Plain-text variables set in the dashboard survive a deploy. Without this,
+  // `wrangler deploy` removes any variable that is not listed in this file.
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths get index.html, as the Netlify "/* -> /index.html" rule did.
+    "not_found_handling": "single-page-application",
+    // Only the API reaches the Worker script; everything else is a static file.
+    "run_worker_first": ["/api/*"]
+  },
+  "ratelimits": [
+    {
+      // Edge limit on POST /api/contact, keyed by client IP in worker/index.js.
+      // Netlify's rule was 3 per 180 s; Cloudflare allows a 10 s or 60 s period.
+      // The handler's own 3 per 180 s limit still applies behind this one.
+      "name": "CONTACT_RATE_LIMITER",
+      "namespace_id": "4741",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "observability": { "enabled": true }
+}
