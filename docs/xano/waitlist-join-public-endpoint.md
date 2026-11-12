@@ -22,7 +22,7 @@ secrets exist.
 | `age_band` | text | `18-20`, `21-29`, `30-44` or `45+` |
 | `gender` | text | `woman`, `man` or `nonbinary` |
 | `seeking` | text | `women`, `men` or `everyone` |
-| `source_tag` | text | May be `""`; `[a-z0-9-]` only, max 40 |
+| `source_tag` | text | The channel from the page link `?src=` (e.g. `x`, `reddit`); the site sends `direct` when there is none. May be `""` from older callers; `[a-z0-9-]` only, max 40 |
 | `adult_confirmed` | bool | Required and must be true |
 | `consent` | bool | Required and must be true |
 
