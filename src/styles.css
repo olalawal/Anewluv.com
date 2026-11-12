@@ -4997,6 +4997,39 @@ select {
   white-space: nowrap;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0;
+  accent-color: var(--rose);
+}
+
+.form-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.contact-section .form-note {
+  color: var(--muted);
+}
+
+.form-note a {
+  color: var(--rose-dark);
+  font-weight: 800;
+}
+
 .turnstile-widget {
   min-height: 65px;
   width: 100%;

@@ -1,11 +1,20 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import {
+  WAITLIST_AGE_BANDS,
+  WAITLIST_CITIES,
+  WAITLIST_GENDERS,
+  WAITLIST_SEEKING,
+  findWaitlistCity,
+  sanitizeSourceTag,
+} from "./waitlist-shared.js";
 
 const purchaseCopy =
   "Paid purchases provide access to subscriptions, premium memberships, Hearts in-app credit, and optional digital features delivered inside Anewluv.";
 
 const CONTACT_ENDPOINT = "/api/contact";
+const WAITLIST_ENDPOINT = "/api/waitlist";
 const PUBLIC_INQUIRY_OPTIONS = [
   ["general_information", "General information"],
   ["advertising", "Advertising"],
@@ -71,6 +80,7 @@ const primaryNavItems = [
 
 const footerNavItems = [
   ...primaryNavItems,
+  ["Waitlist", "/waitlist"],
   ["Refunds", "/refunds"],
   ["Unsubscribe", "/unsubscribe"],
 ];
@@ -326,7 +336,7 @@ function loadTurnstileScript() {
 }
 
 const TurnstileWidget = React.forwardRef(function TurnstileWidget(
-  { onStatusChange, onToken },
+  { action = "contact_form", onStatusChange, onToken },
   ref,
 ) {
   const containerRef = React.useRef(null);
@@ -353,7 +363,7 @@ const TurnstileWidget = React.forwardRef(function TurnstileWidget(
       .then((turnstile) => {
         if (cancelled || !turnstile || !containerRef.current) return;
         widgetIdRef.current = turnstile.render(containerRef.current, {
-          action: "contact_form",
+          action,
           appearance: "interaction-only",
           callback: (token) => {
             onToken(token);
@@ -383,10 +393,42 @@ const TurnstileWidget = React.forwardRef(function TurnstileWidget(
       }
       widgetIdRef.current = null;
     };
-  }, [onStatusChange, onToken]);
+  }, [action, onStatusChange, onToken]);
 
   return <div className="turnstile-widget" ref={containerRef} />;
 });
+
+async function submitWaitlistPOST(payload) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONTACT_SUBMIT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(WAITLIST_ENDPOINT, {
+      body: JSON.stringify(payload),
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      // The status code is enough for the visitor-facing message.
+    }
+    if (response.status >= 200 && response.status < 300 && body?.ok) {
+      return { ok: true };
+    }
+    return { ok: false, code: body?.code || "" };
+  } catch {
+    clearTimeout(timeoutId);
+    return { ok: false, code: "network_error" };
+  }
+}
 
 function getAppPreviewSessionId() {
   if (typeof window === "undefined") return "server";
@@ -651,6 +693,7 @@ function routeFor(path) {
   if (path === "/refunds") return <LegalPage type="refunds" />;
   if (path === "/community-guidelines") return <GuidelinesPage />;
   if (path === "/contact-us") return <ContactPage />;
+  if (path === "/waitlist") return <WaitlistPage />;
   if (path === "/unsubscribe") return <UnsubscribePage />;
   return <HomePage />;
 }
@@ -746,6 +789,9 @@ function HomePage() {
             </a>
             <a className="button secondary" href="/pricing">
               View pricing
+            </a>
+            <a className="button secondary" href="/waitlist">
+              Join the waitlist
             </a>
           </div>
           <div className="hero-card-row" aria-label="Quick actions">
@@ -2810,6 +2856,230 @@ function ContactSection({ mode = "contact" }) {
         </button>
       </form>
     </section>
+  );
+}
+
+function WaitlistPage() {
+  const params = React.useMemo(() => new URLSearchParams(window.location.search), []);
+  const rawCity = params.get("city") || "";
+  const sourceTag = sanitizeSourceTag(rawCity);
+  const presetCity = findWaitlistCity(rawCity.trim().toLowerCase())?.slug || "";
+  const turnstileRef = React.useRef(null);
+  const [form, setForm] = React.useState({
+    city_slug: presetCity,
+    email: "",
+    age_band: "",
+    gender: "",
+    seeking: "",
+    adult_confirmed: false,
+    website: "",
+  });
+  const [turnstileToken, setTurnstileToken] = React.useState("");
+  const [turnstileStatus, setTurnstileStatus] = React.useState(
+    TURNSTILE_SITE_KEY ? "loading" : "unavailable",
+  );
+  const [submitState, setSubmitState] = React.useState({
+    status: "idle",
+    cityLabel: "",
+    errorMessage: "",
+  });
+
+  const trimmedEmail = form.email.trim();
+  const canSubmit =
+    submitState.status !== "submitting" &&
+    isValidEmail(trimmedEmail) &&
+    trimmedEmail.length <= 254 &&
+    Boolean(form.city_slug && form.age_band && form.gender && form.seeking) &&
+    form.adult_confirmed &&
+    Boolean(turnstileToken);
+
+  const updateTurnstileStatus = React.useCallback((status) => setTurnstileStatus(status), []);
+  const updateTurnstileToken = React.useCallback((token) => setTurnstileToken(token), []);
+  const updateField = React.useCallback((event) => {
+    const { name, type, checked, value } = event.target;
+    setForm((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
+  }, []);
+
+  const handleSubmit = React.useCallback(
+    async (event) => {
+      event.preventDefault();
+      if (!canSubmit) {
+        setSubmitState({
+          status: "error",
+          cityLabel: "",
+          errorMessage:
+            "Choose your city, enter a valid email, answer each question, and confirm you are 18 or older.",
+        });
+        return;
+      }
+
+      const cityLabel = findWaitlistCity(form.city_slug)?.label || "";
+      setSubmitState({ status: "submitting", cityLabel, errorMessage: "" });
+      const response = await submitWaitlistPOST({
+        adult_confirmed: true,
+        age_band: form.age_band,
+        city_slug: form.city_slug,
+        consent: true,
+        email: trimmedEmail,
+        gender: form.gender,
+        seeking: form.seeking,
+        source_tag: sourceTag,
+        turnstile_token: turnstileToken,
+        website: form.website,
+      });
+      turnstileRef.current?.reset();
+
+      if (response?.ok) {
+        setSubmitState({ status: "success", cityLabel, errorMessage: "" });
+        setForm((current) => ({
+          ...current,
+          email: "",
+          age_band: "",
+          gender: "",
+          seeking: "",
+          adult_confirmed: false,
+        }));
+        return;
+      }
+
+      const messages = {
+        adult_required: "You need to confirm you are 18 or older.",
+        anti_bot_invalid: "Security verification expired. Complete it again and resend.",
+        endpoint_unavailable: "The waitlist is temporarily unavailable. Try again later.",
+        invalid_email: "That email address does not look right. Check it and try again.",
+        rate_limited: "Too many requests right now. Wait a minute and try again.",
+      };
+      setSubmitState({
+        status: "error",
+        cityLabel: "",
+        errorMessage:
+          messages[response?.code] || "We couldn't add you right now. Try again later.",
+      });
+    },
+    [canSubmit, form, sourceTag, trimmedEmail, turnstileToken],
+  );
+
+  return (
+    <main className="page">
+      <PageHero
+        eyebrow="Waitlist"
+        title="Join the Anewluv waitlist for your city"
+        body="Tell us where you are. We will email you once when Anewluv opens in your city."
+      />
+      <section className="section contact-section waitlist-section">
+        <div>
+          <p className="eyebrow">Your city</p>
+          <h2>Be first when we open near you.</h2>
+          <p>
+            We open one city at a time, starting where the most people sign up. Your answers
+            only help us count interest and tell you when your city is ready.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <label>
+            City
+            <select name="city_slug" onChange={updateField} required value={form.city_slug}>
+              <option value="">Choose your city</option>
+              {WAITLIST_CITIES.map((city) => (
+                <option key={city.slug} value={city.slug}>
+                  {city.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={254}
+              onChange={updateField}
+              required
+              value={form.email}
+            />
+          </label>
+          <label>
+            Age
+            <select name="age_band" onChange={updateField} required value={form.age_band}>
+              <option value="">Choose an age range</option>
+              {WAITLIST_AGE_BANDS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            I am a
+            <select name="gender" onChange={updateField} required value={form.gender}>
+              <option value="">Choose one</option>
+              {WAITLIST_GENDERS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            I want to meet
+            <select name="seeking" onChange={updateField} required value={form.seeking}>
+              <option value="">Choose one</option>
+              {WAITLIST_SEEKING.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="checkbox-row">
+            <input
+              checked={form.adult_confirmed}
+              name="adult_confirmed"
+              onChange={updateField}
+              type="checkbox"
+            />
+            <span>I am 18 or older</span>
+          </label>
+          <label aria-hidden="true" className="contact-honeypot">
+            Website
+            <input
+              autoComplete="off"
+              name="website"
+              onChange={updateField}
+              tabIndex={-1}
+              value={form.website}
+            />
+          </label>
+          <p className="form-note">
+            We'll email you once when Anewluv opens in your city. No spam, no sharing.{" "}
+            <a href="/privacy-policy#waitlist">Privacy</a>
+          </p>
+          <TurnstileWidget
+            action="waitlist_form"
+            onStatusChange={updateTurnstileStatus}
+            onToken={updateTurnstileToken}
+            ref={turnstileRef}
+          />
+          {["unavailable", "error", "expired"].includes(turnstileStatus) ? (
+            <p className="form-feedback error">
+              Security verification is unavailable. Try again later.
+            </p>
+          ) : null}
+          {submitState.status === "success" ? (
+            <p className="form-feedback success" role="status">
+              You're on the list for {submitState.cityLabel}.
+            </p>
+          ) : null}
+          {submitState.status === "error" ? (
+            <p className="form-feedback error" role="alert">{submitState.errorMessage}</p>
+          ) : null}
+          <button disabled={!canSubmit} type="submit">
+            {submitState.status === "submitting" ? "Joining..." : "Join the waitlist"}
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 
