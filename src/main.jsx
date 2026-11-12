@@ -656,18 +656,27 @@ function routeFor(path) {
 }
 
 function SiteHeader({ onToggleTheme, theme }) {
+  // Phones (<= 720px) keep one short header row: brand, "Open app" and a
+  // Menu button; the nav links and the theme switch open below it.
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const nextTheme = theme === "dark" ? "light" : "dark";
+  const themeLabel = `Switch site and app previews to ${nextTheme} mode`;
   return (
-    <header className="site-header">
+    <header className={`site-header${menuOpen ? " menu-open" : ""}`}>
       <a className="brand" href="/">
         <img className="brand-mark" src={logoSrc} alt="" />
         <span>Anewluv</span>
       </a>
-      <nav aria-label="Main navigation">
+      <nav aria-label="Main navigation" id="site-nav">
         {primaryNavItems.map(([label, href]) => (
           <a key={href} href={href}>
             {label}
           </a>
         ))}
+        <button className="nav-theme-toggle" type="button" onClick={onToggleTheme} aria-label={themeLabel}>
+          <IconGlyph type={nextTheme === "light" ? "sun" : "moon"} />
+          <span>{nextTheme === "light" ? "Light mode" : "Dark mode"}</span>
+        </button>
       </nav>
       <div className="header-actions">
         <SocialLinks compact label="Social links" />
@@ -675,14 +684,23 @@ function SiteHeader({ onToggleTheme, theme }) {
           className="theme-toggle"
           type="button"
           onClick={onToggleTheme}
-          aria-label={`Switch site and app previews to ${theme === "dark" ? "light" : "dark"} mode`}
-          title={`Switch site and app previews to ${theme === "dark" ? "light" : "dark"} mode`}
+          aria-label={themeLabel}
+          title={themeLabel}
         >
           <IconGlyph type={theme === "dark" ? "sun" : "moon"} />
         </button>
         <a className="header-cta" href={APP_BASE_URL}>
           Open app
         </a>
+        <button
+          aria-controls="site-nav"
+          aria-expanded={menuOpen}
+          className="menu-toggle"
+          onClick={() => setMenuOpen((open) => !open)}
+          type="button"
+        >
+          {menuOpen ? "Close" : "Menu"}
+        </button>
       </div>
     </header>
   );

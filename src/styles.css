@@ -5223,56 +5223,6 @@ footer > span {
 }
 
 @media (max-width: 720px) {
-  /* Phone header: brand and actions share one row; every nav link stays
-     visible by wrapping instead of a sideways scroll that hid "Contact". */
-  .site-header {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 8px 12px;
-    min-height: 0;
-    padding: 10px 16px;
-  }
-
-  .site-header .brand {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .site-header .header-actions {
-    grid-column: 2;
-    grid-row: 1;
-    width: auto;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .site-header nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    gap: 0 16px;
-    padding-bottom: 0;
-  }
-
-  .site-header nav a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-  }
-
-  .site-header .brand-mark {
-    width: 38px;
-    height: 34px;
-  }
-
-  .site-header .header-cta {
-    min-height: 44px;
-    padding: 0 16px;
-    white-space: nowrap;
-  }
-
   .hero {
     padding-top: 30px;
   }
@@ -5496,9 +5446,110 @@ footer > span {
   }
 }
 
-@media (max-width: 400px) {
-  /* Too narrow for brand + three header controls; the TikTok link stays in the footer. */
-  .site-header .header-actions .social-links {
+@media (max-width: 980px) {
+  /* Phone and tablet header: one row (brand, Open app, Menu) about 64px tall; the nav
+     links and the theme switch open in a panel below it. */
+  .site-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 12px;
+    min-height: 0;
+    padding: 10px 16px;
+  }
+
+  .site-header .brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .site-header .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .site-header nav {
+    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 0 16px;
+    padding: 6px 0 4px;
+    font-size: 15px;
+  }
+
+  .site-header.menu-open nav {
+    display: flex;
+  }
+
+  .site-header nav a,
+  .site-header .nav-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-header .nav-theme-toggle {
+    gap: 6px;
+  }
+
+  .site-header .menu-toggle {
+    display: inline-flex;
+  }
+
+  .site-header .brand-mark {
+    width: 38px;
+    height: 34px;
+  }
+
+  .site-header .header-cta {
+    min-height: 44px;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Phones: the theme switch moves into the menu, TikTok stays in the footer. */
+  .site-header .header-actions .social-links,
+  .site-header .header-actions .theme-toggle {
+    display: none;
+  }
+}
+
+/* Menu button and the in-menu theme switch exist for phones only. */
+.menu-toggle,
+.nav-theme-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 0 14px;
+  background: var(--card-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.nav-theme-toggle {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+@media (min-width: 721px) {
+  /* Tablets keep the theme switch in the header row. */
+  .site-header .nav-theme-toggle {
     display: none;
   }
 }
