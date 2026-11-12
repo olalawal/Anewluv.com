@@ -8,6 +8,7 @@ import { extname, join, resolve } from "node:path";
 import appPreviewHandler from "../netlify/functions/app-preview.js";
 import contactHandler from "../netlify/functions/contact.js";
 import homepageProfilesHandler from "../netlify/functions/homepage-profiles.js";
+import waitlistHandler from "../netlify/functions/waitlist.js";
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 8082);
@@ -91,6 +92,20 @@ const server = createServer(async (req, res) => {
         res,
         await contactHandler(toRequest(req, body), {
           ip: req.socket.remoteAddress || "local-client",
+          requestId: `local-${randomUUID()}`,
+        }),
+      );
+    }
+    if (url.pathname === "/api/waitlist") {
+      const body = await readBody(req);
+      // The test-IP header is honoured only for scripts/local-waitlist-preview.mjs,
+      // so separate recorded clients do not share one local rate-limit bucket.
+      const testIp =
+        process.env.LOCAL_TEST_CLIENT_IP_HEADER === "1" ? req.headers["x-local-test-client-ip"] : "";
+      return sendWebResponse(
+        res,
+        await waitlistHandler(toRequest(req, body), {
+          ip: String(testIp || req.socket.remoteAddress || "local-client"),
           requestId: `local-${randomUUID()}`,
         }),
       );
