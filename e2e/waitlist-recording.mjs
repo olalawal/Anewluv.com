@@ -86,8 +86,8 @@ for (const profile of profiles) {
     const submit = page.getByRole("button", { name: "Join the waitlist" });
     await submit.scrollIntoViewIfNeeded();
     await pause(500);
-    // The page heading changes on success; the city line is under it.
-    const success = page.getByText(`opens in ${signup.label}.`);
+    // The page heading changes on success.
+    const success = page.getByRole("heading", { level: 1, name: "You're on the list." });
     // The button is always enabled; if the security check has no token yet
     // the page says so, and the click is repeated once it is ready.
     for (let attempt = 0; attempt < 10; attempt += 1) {

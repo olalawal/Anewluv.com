@@ -6961,3 +6961,16 @@ html[data-theme="dark"] .look-c .waitlist-section {
     align-self: center;
   }
 }
+
+@media (max-width: 600px) {
+  /* A after a sign-up: the photo band says what happens next instead of the pin. */
+  .look-a.is-joined .waitlist-pin {
+    display: none;
+  }
+
+  .look-a.is-joined .waitlist-lead {
+    display: block;
+    margin-top: 8px;
+    font-size: 15px;
+  }
+}

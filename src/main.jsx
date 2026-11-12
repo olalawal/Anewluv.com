@@ -3147,7 +3147,7 @@ function WaitlistPage() {
   const joinedCity = joinedCityRaw && joinedCityRaw.slug !== "other" ? joinedCityRaw : null;
 
   return (
-    <main className={`page waitlist-page${look ? ` look-${look}` : ""}`}>
+    <main className={`page waitlist-page${look ? ` look-${look}` : ""}${joined ? " is-joined" : ""}`}>
       <section className="section waitlist-section">
         {look === "a" ? (
           <img
