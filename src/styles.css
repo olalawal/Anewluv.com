@@ -6695,3 +6695,130 @@ html[data-theme="dark"] .look-c .waitlist-section {
     height: 220px;
   }
 }
+
+/* r2 of the looks (critic round 1): phones load with no fade (the first frame
+   was washed out), the second action is a text link, and the form is tighter
+   so Join sits clear of the fold. */
+.waitlist-another {
+  justify-self: center;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--rose-dark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.look-a .waitlist-another,
+.look-b .waitlist-another,
+.look-c .waitlist-another {
+  color: #9b174f;
+}
+
+.waitlist-share-link {
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .waitlist-page .waitlist-intro,
+  .waitlist-page .waitlist-card,
+  .waitlist-page .waitlist-points,
+  .waitlist-page .waitlist-heart,
+  .waitlist-page .waitlist-masthead,
+  .waitlist-done-icon {
+    animation: none;
+  }
+
+  .waitlist-another {
+    width: auto;
+  }
+
+  .waitlist-page .waitlist-card form {
+    gap: 12px;
+  }
+
+  .waitlist-page .waitlist-card input,
+  .waitlist-page .waitlist-card select {
+    min-height: 46px;
+  }
+
+  .waitlist-page .waitlist-card label {
+    gap: 6px;
+  }
+
+  .waitlist-page .waitlist-card .form-note {
+    font-size: 13px;
+  }
+
+  .look-b .waitlist-section,
+  .look-c .waitlist-section {
+    padding-top: 18px;
+  }
+
+  .look-b .waitlist-intro h1 {
+    font-size: 44px;
+    text-wrap: balance;
+  }
+
+  .look-c .waitlist-intro h1 {
+    font-size: 46px;
+  }
+
+  .look-c .waitlist-section {
+    gap: 16px;
+  }
+
+  .look-c .waitlist-card {
+    box-shadow: 0 16px 36px rgba(60, 20, 40, 0.14);
+  }
+
+  .look-a .waitlist-hero-photo,
+  .look-a .waitlist-section::before {
+    height: 270px;
+  }
+
+  .look-a .waitlist-intro {
+    padding-bottom: 40px;
+  }
+
+  .look-a .waitlist-pin {
+    margin-bottom: 12px;
+  }
+}
+
+/* r2 desktop notes: B's accent is warm peach, not cyan; C's button is pink at
+   rest with a soft pink offset instead of a hard black one. */
+.look-b .waitlist-intro h1 em {
+  color: #ffd9c7;
+}
+
+.look-b .waitlist-points li::before {
+  background: #ffd9c7;
+  box-shadow: 0 0 0 5px rgba(255, 217, 199, 0.24);
+}
+
+.look-b .waitlist-cities button[aria-pressed="true"] {
+  border-color: #fff6ee;
+  background: #fff6ee;
+  color: #9b174f;
+}
+
+.look-c .waitlist-card {
+  box-shadow: 8px 8px 0 #f3b6cf;
+}
+
+.look-c .waitlist-card form button[type="submit"],
+.look-c .waitlist-share-row button {
+  background: var(--rose);
+  color: white;
+}
+
+@media (hover: hover) {
+  .look-c .waitlist-card form button[type="submit"]:hover {
+    background: #1f1722;
+  }
+}
+
+.look-c .waitlist-share-row button.is-copied {
+  background: #9b174f;
+}
