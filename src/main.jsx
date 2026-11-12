@@ -2983,10 +2983,36 @@ function WaitlistDone({ citySlug, minHeight, onAnother }) {
 
 const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "", formHeight: 0 };
 
+const WAITLIST_LOOKS = {
+  base: { eyebrow: "Waitlist", headline: "Join the Anewluv waitlist for your city", pin: "" },
+  a: { eyebrow: "", headline: "Meet someone new in your city.", pin: "Opening first in five cities" },
+  b: {
+    eyebrow: "",
+    headline: (
+      <>
+        Love is opening <em>city by city.</em>
+      </>
+    ),
+    pin: "",
+  },
+  c: {
+    eyebrow: "",
+    headline: (
+      <>
+        Love, <em>close to home.</em>
+      </>
+    ),
+    pin: "",
+  },
+};
+
 function WaitlistPage() {
   const params = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const rawCity = params.get("city") || "";
   const sourceTag = channelSourceTag(params.get("src"));
+  // Review switch for the three candidate designs (AN-WAITLIST-LOOK); removed once one is picked.
+  const look = WAITLIST_LOOKS[params.get("look")] ? params.get("look") : "";
+  const copy = WAITLIST_LOOKS[look] || WAITLIST_LOOKS.base;
   const presetCity = findWaitlistCity(rawCity.trim().toLowerCase())?.slug || "";
   const turnstileRef = React.useRef(null);
   const formRef = React.useRef(null);
@@ -3109,15 +3135,54 @@ function WaitlistPage() {
 
   const signUpAnother = React.useCallback(() => setSubmitState(WAITLIST_IDLE), []);
   const pilotCities = WAITLIST_CITIES.filter((city) => city.slug !== "other");
-  const invalid = (name) => (submitState.errorField === name ? true : undefined);
+  const fieldHasError = (name) => submitState.status === "error" && submitState.errorField === name;
+  const invalid = (name) => (fieldHasError(name) ? true : undefined);
+  const describedBy = (name) => (fieldHasError(name) ? `waitlist-error-${name}` : undefined);
+  // The message sits under the field it is about, so the Join button does not move.
+  const fieldError = (name) =>
+    fieldHasError(name) ? (
+      <span className="waitlist-field-error" id={`waitlist-error-${name}`} role="alert">
+        {submitState.errorMessage}
+      </span>
+    ) : null;
   const emptyClass = (value) => (value ? undefined : "is-empty");
 
   return (
-    <main className="page">
+    <main className={`page waitlist-page${look ? ` look-${look}` : ""}`}>
       <section className="section waitlist-section">
+        {look === "a" ? (
+          <img
+            alt=""
+            className="waitlist-hero-photo"
+            decoding="async"
+            fetchpriority="high"
+            src={lifestyleImages.park}
+          />
+        ) : null}
+        {look === "b" ? (
+          <svg aria-hidden="true" className="waitlist-heart" focusable="false" viewBox="0 0 100 92">
+            <path d="M50 88C22 66 4 50 4 28 4 14 15 4 28 4c9 0 17 5 22 13C55 9 63 4 72 4c13 0 24 10 24 24 0 22-18 38-46 60z" />
+          </svg>
+        ) : null}
+        {look === "c" ? (
+          <p className="waitlist-masthead">
+            <span>The waitlist</span>
+            <span>Issue 01</span>
+            <span>Opening city by city</span>
+          </p>
+        ) : null}
         <div className="waitlist-intro">
-          <p className="eyebrow">Waitlist</p>
-          <h1>Join the Anewluv waitlist for your city</h1>
+          {copy.pin ? (
+            <p className="waitlist-pin">
+              <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M12 22s7-7.1 7-12.4A7 7 0 0 0 5 9.6C5 14.9 12 22 12 22z" />
+                <circle cx="12" cy="9.5" r="2.6" />
+              </svg>
+              {copy.pin}
+            </p>
+          ) : null}
+          {copy.eyebrow ? <p className="eyebrow">{copy.eyebrow}</p> : null}
+          <h1>{copy.headline}</h1>
           <p className="waitlist-lead">
             Tell us where you are. We will email you once when Anewluv opens in your city.
           </p>
@@ -3135,6 +3200,7 @@ function WaitlistPage() {
               <label>
                 City
                 <select
+                  aria-describedby={describedBy("city_slug")}
                   aria-invalid={invalid("city_slug")}
                   className={emptyClass(form.city_slug)}
                   name="city_slug"
@@ -3149,10 +3215,12 @@ function WaitlistPage() {
                     </option>
                   ))}
                 </select>
+                {fieldError("city_slug")}
               </label>
               <label>
                 Email
                 <input
+                  aria-describedby={describedBy("email")}
                   aria-invalid={invalid("email")}
                   autoComplete="email"
                   inputMode="email"
@@ -3164,11 +3232,13 @@ function WaitlistPage() {
                   type="email"
                   value={form.email}
                 />
+                {fieldError("email")}
               </label>
               <div className="waitlist-row">
                 <label>
                   Age
                   <select
+                    aria-describedby={describedBy("age_band")}
                     aria-invalid={invalid("age_band")}
                     className={emptyClass(form.age_band)}
                     name="age_band"
@@ -3183,10 +3253,12 @@ function WaitlistPage() {
                       </option>
                     ))}
                   </select>
+                  {fieldError("age_band")}
                 </label>
                 <label>
                   I am a
                   <select
+                    aria-describedby={describedBy("gender")}
                     aria-invalid={invalid("gender")}
                     className={emptyClass(form.gender)}
                     name="gender"
@@ -3201,10 +3273,12 @@ function WaitlistPage() {
                       </option>
                     ))}
                   </select>
+                  {fieldError("gender")}
                 </label>
                 <label>
                   I want to meet
                   <select
+                    aria-describedby={describedBy("seeking")}
                     aria-invalid={invalid("seeking")}
                     className={emptyClass(form.seeking)}
                     name="seeking"
@@ -3219,10 +3293,12 @@ function WaitlistPage() {
                       </option>
                     ))}
                   </select>
+                  {fieldError("seeking")}
                 </label>
               </div>
               <label className="checkbox-row">
                 <input
+                  aria-describedby={describedBy("adult_confirmed")}
                   aria-invalid={invalid("adult_confirmed")}
                   checked={form.adult_confirmed}
                   name="adult_confirmed"
@@ -3231,6 +3307,7 @@ function WaitlistPage() {
                 />
                 <span>I am 18 or older</span>
               </label>
+              {fieldError("adult_confirmed")}
               <label aria-hidden="true" className="contact-honeypot">
                 Website
                 <input
@@ -3252,7 +3329,7 @@ function WaitlistPage() {
                   Security verification is unavailable. Try again later.
                 </p>
               ) : null}
-              {submitState.status === "error" ? (
+              {submitState.status === "error" && !submitState.errorField ? (
                 <p className="form-feedback error" role="alert">
                   {submitState.errorMessage}
                 </p>
@@ -3269,14 +3346,16 @@ function WaitlistPage() {
         </div>
 
         <div className="waitlist-points">
-          <figure className="waitlist-photo">
-            <img
-              alt="Two people smiling at a phone together in a cafe"
-              decoding="async"
-              src={lifestyleImages.cafe}
-            />
-            <figcaption>Opening one city at a time</figcaption>
-          </figure>
+          {look === "a" || look === "b" ? null : (
+            <figure className="waitlist-photo">
+              <img
+                alt="Two people smiling at a phone together in a cafe"
+                decoding="async"
+                src={lifestyleImages.cafe}
+              />
+              <figcaption>Opening one city at a time</figcaption>
+            </figure>
+          )}
           <ul>
             <li>
               <strong>One city at a time.</strong> We open first where the most people sign up.

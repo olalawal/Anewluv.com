@@ -16,16 +16,21 @@ const { chromium } = require(`${modules}/playwright`);
 const SITE = process.env.SITE_URL || "http://127.0.0.1:8791";
 const MOCK = process.env.MOCK_URL || "http://127.0.0.1:8789";
 const OUT_DIR = process.env.OUT_DIR || "H:/Temp/anewluv/waitlist-clips";
+// LOOK=a|b|c records one candidate design; it also shortens the run to one
+// sign-up with no counts view, for side-by-side comparison clips.
+const LOOK = process.env.LOOK || "";
+const IP_OFFSET = Number(process.env.IP_OFFSET || 0);
 mkdirSync(OUT_DIR, { recursive: true });
 
 const profiles = [
   { name: "desktop", viewport: { width: 1280, height: 800 }, ip: "198.51.100.11", mobile: false },
   { name: "phone", viewport: { width: 390, height: 844 }, ip: "198.51.100.12", mobile: true },
 ];
-const signups = [
+const allSignups = [
   { city: "missoula-mt", src: "x", label: "Missoula, MT", email: "wl-test-{p}-1@mail.invalid", age: "21-29", gender: "woman", seeking: "men" },
   { city: "denver-co", src: "reddit", label: "Denver, CO", email: "wl-test-{p}-2@mail.invalid", age: "30-44", gender: "man", seeking: "women" },
 ];
+const signups = LOOK ? allSignups.slice(0, 1) : allSignups;
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, headless: true });
@@ -33,7 +38,9 @@ const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXEC
 for (const profile of profiles) {
   const videoDir = join(OUT_DIR, `_raw-${profile.name}`);
   const context = await browser.newContext({
-    extraHTTPHeaders: { "x-local-test-client-ip": profile.ip },
+    extraHTTPHeaders: {
+      "x-local-test-client-ip": profile.ip.replace(/\d+$/, (n) => String(Number(n) + IP_OFFSET)),
+    },
     hasTouch: profile.mobile,
     isMobile: profile.mobile,
     recordVideo: { dir: videoDir, size: profile.viewport },
@@ -45,7 +52,8 @@ for (const profile of profiles) {
   page.on("pageerror", (error) => errors.push(String(error)));
 
   for (const [index, signup] of signups.entries()) {
-    await page.goto(`${SITE}/waitlist?city=${signup.city}&src=${signup.src}`);
+    const look = LOOK ? `&look=${LOOK}` : "";
+    await page.goto(`${SITE}/waitlist?city=${signup.city}&src=${signup.src}${look}`);
     await page.locator('select[name="city_slug"]').waitFor();
     if (index === 0) {
       await page.getByRole("button", { name: "Accept" }).click().catch(() => {});
@@ -58,12 +66,12 @@ for (const profile of profiles) {
     if (index === 0) {
       // Show the error state once: pressing Join with no email names the field.
       await page.getByRole("button", { name: "Join the waitlist" }).click();
-      await page.locator(".form-feedback.error").waitFor();
+      await page.locator(".waitlist-field-error").waitFor();
       await pause(1400);
     }
 
     await page.locator('input[name="email"]').pressSequentially(
-      signup.email.replace("{p}", profile.name),
+      signup.email.replace("{p}", `${profile.name}${LOOK}${Date.now() % 100000}`),
       { delay: 45 },
     );
     await page.locator('select[name="age_band"]').selectOption(signup.age);
@@ -93,11 +101,13 @@ for (const profile of profiles) {
     await pause(1500);
   }
 
-  await page.goto(`${MOCK}/counts-view`);
-  await page.locator("table").first().waitFor();
-  await pause(2500);
-  await page.mouse.wheel(0, 700);
-  await pause(1500);
+  if (!LOOK) {
+    await page.goto(`${MOCK}/counts-view`);
+    await page.locator("table").first().waitFor();
+    await pause(2500);
+    await page.mouse.wheel(0, 700);
+    await pause(1500);
+  }
   if (errors.length) throw new Error(`Browser errors: ${errors.join(" | ")}`);
 
   const video = page.video();
