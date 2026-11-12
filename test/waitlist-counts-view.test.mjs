@@ -40,6 +40,7 @@ test("the page is counts only, escapes text and labels the opening number as a g
   const html = renderCountsPage({ groups: [{ ...counts.groups[0], source_tag: "<b>" }] });
   assert.ok(!/[a-z0-9._%+-]+@[a-z0-9-]+\.[a-z]/i.test(html), "no email-like text");
   assert.ok(html.includes("&lt;b&gt;"));
-  assert.ok(html.includes(`${OPENING_GUESS} (a guess, not a gate)`));
+  assert.ok(html.includes(`about ${OPENING_GUESS} (an estimate, not a requirement)`));
+  assert.ok(html.includes("Toward the opening estimate"));
   assert.equal(OPENING_GUESS, 300);
 });

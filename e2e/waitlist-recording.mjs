@@ -51,8 +51,9 @@ for (const profile of profiles) {
     }
     const selected = await page.locator('select[name="city_slug"]').inputValue();
     if (selected !== signup.city) throw new Error(`city preselect failed: ${selected}`);
-    await page.locator("form").scrollIntoViewIfNeeded();
-    await pause(900);
+    // The phone cookie banner sits at the end of the page; start from the top.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await pause(1600);
 
     await page.locator('input[name="email"]').pressSequentially(
       signup.email.replace("{p}", profile.name),
@@ -68,23 +69,18 @@ for (const profile of profiles) {
     await pause(500);
 
     const submit = page.getByRole("button", { name: "Join the waitlist" });
-    await page.waitForFunction(
-      () => {
-        const button = [...document.querySelectorAll("button")].find((b) =>
-          b.textContent.includes("Join the waitlist"),
-        );
-        return button && !button.disabled;
-      },
-      null,
-      { timeout: 20000 },
-    );
     await submit.scrollIntoViewIfNeeded();
     await pause(500);
-    await submit.click();
     const success = page.getByText(`You're on the list for ${signup.label}.`);
+    // The button is always enabled; if the security check has no token yet
+    // the page says so, and the click is repeated once it is ready.
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await submit.click();
+      const done = await success.waitFor({ timeout: 2500 }).then(() => true, () => false);
+      if (done) break;
+    }
     await success.waitFor({ timeout: 15000 });
-    await success.scrollIntoViewIfNeeded();
-    await pause(2500);
+    await pause(3000);
   }
 
   await page.goto(`${MOCK}/counts-view`);

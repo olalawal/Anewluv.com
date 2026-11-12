@@ -5256,56 +5256,6 @@ footer > span {
 }
 
 @media (max-width: 720px) {
-  /* Phone header: brand and actions share one row; every nav link stays
-     visible by wrapping instead of a sideways scroll that hid "Contact". */
-  .site-header {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 8px 12px;
-    min-height: 0;
-    padding: 10px 16px;
-  }
-
-  .site-header .brand {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .site-header .header-actions {
-    grid-column: 2;
-    grid-row: 1;
-    width: auto;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .site-header nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    gap: 0 16px;
-    padding-bottom: 0;
-  }
-
-  .site-header nav a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
-  }
-
-  .site-header .brand-mark {
-    width: 38px;
-    height: 34px;
-  }
-
-  .site-header .header-cta {
-    min-height: 44px;
-    padding: 0 16px;
-    white-space: nowrap;
-  }
-
   .hero {
     padding-top: 30px;
   }
@@ -5529,9 +5479,417 @@ footer > span {
   }
 }
 
-@media (max-width: 400px) {
-  /* Too narrow for brand + three header controls; the TikTok link stays in the footer. */
-  .site-header .header-actions .social-links {
+@media (max-width: 980px) {
+  /* Phone and tablet header: one row (brand, Open app, Menu) about 64px tall; the nav
+     links and the theme switch open in a panel below it. */
+  .site-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 12px;
+    min-height: 0;
+    padding: 10px 16px;
+  }
+
+  .site-header .brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .site-header .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .site-header nav {
     display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 0 16px;
+    padding: 6px 0 4px;
+    font-size: 15px;
+  }
+
+  .site-header.menu-open nav {
+    display: flex;
+  }
+
+  .site-header nav a,
+  .site-header .nav-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .site-header .nav-theme-toggle {
+    gap: 6px;
+  }
+
+  .site-header .menu-toggle {
+    display: inline-flex;
+  }
+
+  .site-header .brand-mark {
+    width: 38px;
+    height: 34px;
+  }
+
+  .site-header .header-cta {
+    min-height: 44px;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Phones: the theme switch moves into the menu, TikTok stays in the footer. */
+  .site-header .header-actions .social-links,
+  .site-header .header-actions .theme-toggle {
+    display: none;
+  }
+}
+
+/* Menu button and the in-menu theme switch exist for phones only. */
+.menu-toggle,
+.nav-theme-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 0 14px;
+  background: var(--card-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.nav-theme-toggle {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+@media (min-width: 721px) {
+  /* Tablets keep the theme switch in the header row. */
+  .site-header .nav-theme-toggle {
+    display: none;
+  }
+}
+
+/* Waitlist page (olalawal/AnewluvExpo#520): one light section, headline and
+   form above the fold on desktop, headline then form on phones. */
+.waitlist-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  grid-template-areas:
+    "intro card"
+    "points card";
+  grid-template-rows: auto 1fr;
+  gap: 28px clamp(28px, 5vw, 72px);
+  align-items: start;
+  padding-top: clamp(32px, 4vw, 56px);
+  background: var(--hero-bg);
+}
+
+.waitlist-intro {
+  grid-area: intro;
+}
+
+.waitlist-intro h1 {
+  max-width: 560px;
+  margin: 0;
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: clamp(40px, 4.6vw, 62px);
+  line-height: 1;
+}
+
+.waitlist-lead {
+  max-width: 500px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.waitlist-points {
+  grid-area: points;
+  max-width: 520px;
+}
+
+.waitlist-points ul {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.waitlist-points li {
+  position: relative;
+  padding-left: 30px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.waitlist-points li::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rose);
+  box-shadow: 0 0 0 5px rgba(232, 50, 124, 0.14);
+}
+
+.waitlist-points strong {
+  color: var(--ink);
+}
+
+.waitlist-cities-label {
+  margin: 26px 0 10px;
+  color: var(--rose-dark);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.waitlist-cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.waitlist-cities button {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0 14px;
+  background: var(--card-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.waitlist-cities button[aria-pressed="true"] {
+  border-color: var(--rose);
+  background: var(--rose);
+  color: white;
+}
+
+.waitlist-card {
+  grid-area: card;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  background: var(--field-bg);
+  box-shadow: var(--shadow);
+}
+
+.waitlist-card form {
+  gap: 18px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.waitlist-card label {
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.waitlist-card input,
+.waitlist-card select {
+  font-size: 16px;
+  font-weight: 500;
+  scroll-margin-top: 96px;
+}
+
+.waitlist-card input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.waitlist-card [aria-invalid="true"] {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(232, 50, 124, 0.18);
+}
+
+.waitlist-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.waitlist-card .checkbox-row {
+  font-size: 15px;
+}
+
+.waitlist-card .turnstile-widget {
+  min-height: 0;
+}
+
+.waitlist-card form button[type="submit"] {
+  width: 100%;
+  min-height: 54px;
+  font-size: 17px;
+}
+
+.waitlist-card .form-note {
+  text-align: center;
+}
+
+.waitlist-done {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  outline: none;
+  scroll-margin-top: 96px;
+}
+
+.waitlist-done-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(35, 140, 114, 0.14);
+}
+
+.waitlist-done-icon svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: #1a8a6c;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.waitlist-done h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.1;
+}
+
+.waitlist-done > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.waitlist-share {
+  width: 100%;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.waitlist-share p {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.waitlist-share-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.waitlist-share-row input {
+  min-height: 48px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.waitlist-share-row button,
+.waitlist-another {
+  min-height: 48px;
+  border-radius: 24px;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.waitlist-share-row button {
+  border: 0;
+  background: var(--rose);
+  color: white;
+}
+
+.waitlist-another {
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+}
+
+@media (max-width: 980px) {
+  .waitlist-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "intro"
+      "card"
+      "points";
+    grid-template-rows: none;
+  }
+
+  .waitlist-points {
+    max-width: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .waitlist-section {
+    gap: 22px;
+    padding: 24px 16px 36px;
+  }
+
+  .waitlist-intro h1 {
+    font-size: 38px;
+  }
+
+  .waitlist-lead {
+    margin-top: 12px;
+    font-size: 16px;
+  }
+
+  .waitlist-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .waitlist-row,
+  .waitlist-share-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .waitlist-row {
+    gap: 18px;
   }
 }
