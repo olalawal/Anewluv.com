@@ -6822,3 +6822,10 @@ html[data-theme="dark"] .look-c .waitlist-section {
 .look-c .waitlist-share-row button.is-copied {
   background: #9b174f;
 }
+
+/* Phones: the soft shadow wins over the pink offset, which the screen edge clips. */
+@media (max-width: 600px) {
+  .look-c .waitlist-card {
+    box-shadow: 0 16px 36px rgba(60, 20, 40, 0.14);
+  }
+}
