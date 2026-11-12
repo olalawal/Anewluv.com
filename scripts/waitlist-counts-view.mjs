@@ -83,7 +83,8 @@ function progress(rows) {
     .map((row) => {
       const total = row[row.length - 1];
       const pct = Math.min(100, Math.round((total / OPENING_GUESS) * 100));
-      return `<li><span class="city">${escapeHtml(row[0])}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="n">${total} / ${OPENING_GUESS}</span></li>`;
+      const fill = total ? `max(4px, ${pct}%)` : "0";
+      return `<li><span class="city">${escapeHtml(row[0])}</span><span class="bar"><i style="width:${fill}"></i></span><span class="n">${total} / ${OPENING_GUESS} · ${pct}%</span></li>`;
     })
     .join("");
   return `<section><h2>Toward the opening estimate</h2><ul class="progress">${items}</ul></section>`;
@@ -92,6 +93,7 @@ function progress(rows) {
 export function renderCountsPage(counts, { testData = true } = {}) {
   const t = countsTables(counts);
   const total = sum(Array.isArray(counts?.groups) ? counts.groups : [], () => true);
+  const cities = t.byCity.rows.filter((row) => row[row.length - 1] > 0).length;
   const note = testData ? "Local test data only. " : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -103,7 +105,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-ap
 main{max-width:960px;margin:0 auto;padding:24px 16px 40px}
 h1{font-size:24px;margin:0 0 4px}
 .sub{color:var(--muted);margin:0 0 18px}
-.total{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:18px}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}.total{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
 .total b{display:block;font-size:30px;color:var(--rose);line-height:1.1}
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 14px 6px;margin:0 0 16px}
 h2{font-size:16px;margin:0 0 10px}
@@ -118,12 +120,12 @@ td.n{font-weight:800}td.z{color:#b9aab4;font-weight:400}
 .badge{display:inline-block;border-radius:10px;padding:1px 8px;background:#fde7f0;color:#9b174f;font-size:12px;font-weight:800}
 .progress{list-style:none;margin:0;padding:0 0 8px;display:grid;gap:10px}
 .progress li{display:grid;grid-template-columns:minmax(96px,140px) 1fr auto;gap:10px;align-items:center}
-.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;min-width:2px;background:var(--rose)}
+.bar{height:10px;border-radius:5px;background:#ecdfe7;overflow:hidden}.bar i{display:block;height:100%;min-width:2px;background:var(--rose)}
 @media (max-width:480px){body{font-size:14px}main{padding:18px 12px 32px}section{padding:12px 10px 4px}th,td{padding:7px 6px}}
 </style></head><body><main>
 <h1>Waitlist counts</h1>
-<p class="sub">${note ? `<span class="badge">${note.trim()}</span> ` : ""}Counts only, no emails. Opening number per city: about ${OPENING_GUESS} (an estimate, not a requirement).</p>
-<div class="total">Sign-ups<b>${total}</b></div>
+<p class="sub">${note ? `<span class="badge">${note.trim()}</span> ` : ""}Counts only, no emails. Opening estimate: about ${OPENING_GUESS} per city (not a requirement).</p>
+<div class="summary"><div class="total">Sign-ups<b>${total}</b></div><div class="total">Cities with sign-ups<b>${cities}</b></div></div>
 ${progress(t.byCity.rows)}
 ${table("By city", t.byCity.head, t.byCity.rows, t.byCity.foot)}
 ${table("By city, gender and age band", t.detail.head, t.detail.rows, t.detail.foot)}
