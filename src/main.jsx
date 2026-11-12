@@ -2878,12 +2878,74 @@ function ContactSection({ mode = "contact" }) {
   );
 }
 
+function WaitlistDone({ citySlug, onAnother }) {
+  const panelRef = React.useRef(null);
+  const [copied, setCopied] = React.useState(false);
+  const city = findWaitlistCity(citySlug);
+  const named = Boolean(city && city.slug !== "other");
+  const shareQuery = new URLSearchParams(named ? { city: city.slug, src: "share" } : { src: "share" });
+  const shareUrl = `${window.location.origin}/waitlist?${shareQuery}`;
+
+  React.useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true });
+    panelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, []);
+
+  const copyLink = React.useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }, [shareUrl]);
+
+  return (
+    <div className="waitlist-done" ref={panelRef} role="status" tabIndex={-1}>
+      <span className="waitlist-done-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+      </span>
+      <h2>{named ? `You're on the list for ${city.label}.` : "You're on the list."}</h2>
+      <p>
+        We'll email you once when Anewluv opens {named ? "there" : "near you"}. That is the only
+        email we send.
+      </p>
+      <div className="waitlist-share">
+        <p>
+          {named
+            ? `Know someone in ${city.label}? Send them this link:`
+            : "Know someone who should join? Send them this link:"}
+        </p>
+        <div className="waitlist-share-row">
+          <input
+            aria-label="Waitlist link to share"
+            onFocus={(event) => event.target.select()}
+            readOnly
+            value={shareUrl}
+          />
+          <button type="button" onClick={copyLink}>
+            {copied ? "Copied" : "Copy link"}
+          </button>
+        </div>
+      </div>
+      <button className="waitlist-another" type="button" onClick={onAnother}>
+        Sign up someone else
+      </button>
+    </div>
+  );
+}
+
+const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "" };
+
 function WaitlistPage() {
   const params = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const rawCity = params.get("city") || "";
   const sourceTag = channelSourceTag(params.get("src"));
   const presetCity = findWaitlistCity(rawCity.trim().toLowerCase())?.slug || "";
   const turnstileRef = React.useRef(null);
+  const formRef = React.useRef(null);
   const [form, setForm] = React.useState({
     city_slug: presetCity,
     email: "",
@@ -2897,44 +2959,63 @@ function WaitlistPage() {
   const [turnstileStatus, setTurnstileStatus] = React.useState(
     TURNSTILE_SITE_KEY ? "loading" : "unavailable",
   );
-  const [submitState, setSubmitState] = React.useState({
-    status: "idle",
-    cityLabel: "",
-    errorMessage: "",
-  });
+  const [submitState, setSubmitState] = React.useState(WAITLIST_IDLE);
 
   const trimmedEmail = form.email.trim();
-  const canSubmit =
-    submitState.status !== "submitting" &&
-    isValidEmail(trimmedEmail) &&
-    trimmedEmail.length <= 254 &&
-    emailLocalPartFits(trimmedEmail) &&
-    Boolean(form.city_slug && form.age_band && form.gender && form.seeking) &&
-    form.adult_confirmed &&
-    Boolean(turnstileToken);
+  // The first unanswered field and what to tell the person; null when the form is complete.
+  const missing = React.useMemo(() => {
+    if (!form.city_slug) return ["city_slug", "Choose your city."];
+    if (
+      !isValidEmail(trimmedEmail) ||
+      trimmedEmail.length > 254 ||
+      !emailLocalPartFits(trimmedEmail)
+    ) {
+      return ["email", "Enter a valid email address."];
+    }
+    if (!form.age_band) return ["age_band", "Choose your age range."];
+    if (!form.gender) return ["gender", "Choose who you are."];
+    if (!form.seeking) return ["seeking", "Choose who you want to meet."];
+    if (!form.adult_confirmed) return ["adult_confirmed", "Confirm you are 18 or older."];
+    return null;
+  }, [form, trimmedEmail]);
 
   const updateTurnstileStatus = React.useCallback((status) => setTurnstileStatus(status), []);
   const updateTurnstileToken = React.useCallback((token) => setTurnstileToken(token), []);
   const updateField = React.useCallback((event) => {
     const { name, type, checked, value } = event.target;
     setForm((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
+    setSubmitState((current) =>
+      current.status === "error" && current.errorField === name ? WAITLIST_IDLE : current,
+    );
+  }, []);
+  const pickCity = React.useCallback((slug) => {
+    setForm((current) => ({ ...current, city_slug: slug }));
+    setSubmitState((current) =>
+      current.status === "error" && current.errorField === "city_slug" ? WAITLIST_IDLE : current,
+    );
   }, []);
 
   const handleSubmit = React.useCallback(
     async (event) => {
       event.preventDefault();
-      if (!canSubmit) {
+      if (submitState.status === "submitting") return;
+      if (missing) {
+        const [field, message] = missing;
+        setSubmitState({ status: "error", citySlug: "", errorMessage: message, errorField: field });
+        formRef.current?.elements.namedItem(field)?.focus();
+        return;
+      }
+      if (!turnstileToken) {
         setSubmitState({
+          ...WAITLIST_IDLE,
           status: "error",
-          cityLabel: "",
-          errorMessage:
-            "Choose your city, enter a valid email, answer each question, and confirm you are 18 or older.",
+          errorMessage: "The security check is still loading. Try again in a moment.",
         });
         return;
       }
 
-      const cityLabel = findWaitlistCity(form.city_slug)?.label || "";
-      setSubmitState({ status: "submitting", cityLabel, errorMessage: "" });
+      const citySlug = form.city_slug;
+      setSubmitState({ ...WAITLIST_IDLE, status: "submitting", citySlug });
       const response = await submitWaitlistPOST({
         adult_confirmed: true,
         age_band: form.age_band,
@@ -2950,7 +3031,7 @@ function WaitlistPage() {
       turnstileRef.current?.reset();
 
       if (response?.ok) {
-        setSubmitState({ status: "success", cityLabel, errorMessage: "" });
+        setSubmitState({ ...WAITLIST_IDLE, status: "success", citySlug });
         setForm((current) => ({
           ...current,
           email: "",
@@ -2970,134 +3051,194 @@ function WaitlistPage() {
         rate_limited: "Too many requests right now. Wait a minute and try again.",
       };
       setSubmitState({
+        ...WAITLIST_IDLE,
         status: "error",
-        cityLabel: "",
         errorMessage:
           messages[response?.code] || "We couldn't add you right now. Try again later.",
+        errorField: response?.code === "invalid_email" ? "email" : "",
       });
     },
-    [canSubmit, form, sourceTag, trimmedEmail, turnstileToken],
+    [form, missing, sourceTag, submitState.status, trimmedEmail, turnstileToken],
   );
+
+  const signUpAnother = React.useCallback(() => setSubmitState(WAITLIST_IDLE), []);
+  const pilotCities = WAITLIST_CITIES.filter((city) => city.slug !== "other");
+  const invalid = (name) => (submitState.errorField === name ? true : undefined);
 
   return (
     <main className="page">
-      <PageHero
-        eyebrow="Waitlist"
-        title="Join the Anewluv waitlist for your city"
-        body="Tell us where you are. We will email you once when Anewluv opens in your city."
-      />
-      <section className="section contact-section waitlist-section">
-        <div>
-          <p className="eyebrow">Your city</p>
-          <h2>Be first when we open near you.</h2>
-          <p>
-            We open one city at a time, starting where the most people sign up. Your answers
-            only help us count interest and tell you when your city is ready.
+      <section className="section waitlist-section">
+        <div className="waitlist-intro">
+          <p className="eyebrow">Waitlist</p>
+          <h1>Join the Anewluv waitlist for your city</h1>
+          <p className="waitlist-lead">
+            Tell us where you are. We will email you once when Anewluv opens in your city.
           </p>
         </div>
-        <form onSubmit={handleSubmit}>
-          <label>
-            City
-            <select name="city_slug" onChange={updateField} required value={form.city_slug}>
-              <option value="">Choose your city</option>
-              {WAITLIST_CITIES.map((city) => (
-                <option key={city.slug} value={city.slug}>
-                  {city.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Email
-            <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              maxLength={254}
-              onChange={updateField}
-              required
-              value={form.email}
-            />
-          </label>
-          <label>
-            Age
-            <select name="age_band" onChange={updateField} required value={form.age_band}>
-              <option value="">Choose an age range</option>
-              {WAITLIST_AGE_BANDS.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            I am a
-            <select name="gender" onChange={updateField} required value={form.gender}>
-              <option value="">Choose one</option>
-              {WAITLIST_GENDERS.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            I want to meet
-            <select name="seeking" onChange={updateField} required value={form.seeking}>
-              <option value="">Choose one</option>
-              {WAITLIST_SEEKING.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="checkbox-row">
-            <input
-              checked={form.adult_confirmed}
-              name="adult_confirmed"
-              onChange={updateField}
-              type="checkbox"
-            />
-            <span>I am 18 or older</span>
-          </label>
-          <label aria-hidden="true" className="contact-honeypot">
-            Website
-            <input
-              autoComplete="off"
-              name="website"
-              onChange={updateField}
-              tabIndex={-1}
-              value={form.website}
-            />
-          </label>
-          <p className="form-note">
-            We'll email you once when Anewluv opens in your city. No spam, no sharing.{" "}
-            <a href="/privacy-policy#waitlist">Privacy</a>
-          </p>
-          <TurnstileWidget
-            action="waitlist_form"
-            onStatusChange={updateTurnstileStatus}
-            onToken={updateTurnstileToken}
-            ref={turnstileRef}
-          />
-          {["unavailable", "error", "expired"].includes(turnstileStatus) ? (
-            <p className="form-feedback error">
-              Security verification is unavailable. Try again later.
-            </p>
-          ) : null}
+
+        <div className="waitlist-card">
           {submitState.status === "success" ? (
-            <p className="form-feedback success" role="status">
-              You're on the list for {submitState.cityLabel}.
-            </p>
-          ) : null}
-          {submitState.status === "error" ? (
-            <p className="form-feedback error" role="alert">{submitState.errorMessage}</p>
-          ) : null}
-          <button disabled={!canSubmit} type="submit">
-            {submitState.status === "submitting" ? "Joining..." : "Join the waitlist"}
-          </button>
-        </form>
+            <WaitlistDone citySlug={submitState.citySlug} onAnother={signUpAnother} />
+          ) : (
+            <form className="waitlist-form" noValidate onSubmit={handleSubmit} ref={formRef}>
+              <label>
+                City
+                <select
+                  aria-invalid={invalid("city_slug")}
+                  name="city_slug"
+                  onChange={updateField}
+                  required
+                  value={form.city_slug}
+                >
+                  <option value="">Choose your city</option>
+                  {WAITLIST_CITIES.map((city) => (
+                    <option key={city.slug} value={city.slug}>
+                      {city.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Email
+                <input
+                  aria-invalid={invalid("email")}
+                  autoComplete="email"
+                  maxLength={254}
+                  name="email"
+                  onChange={updateField}
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                  value={form.email}
+                />
+              </label>
+              <div className="waitlist-row">
+                <label>
+                  Age
+                  <select
+                    aria-invalid={invalid("age_band")}
+                    name="age_band"
+                    onChange={updateField}
+                    required
+                    value={form.age_band}
+                  >
+                    <option value="">Choose</option>
+                    {WAITLIST_AGE_BANDS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  I am a
+                  <select
+                    aria-invalid={invalid("gender")}
+                    name="gender"
+                    onChange={updateField}
+                    required
+                    value={form.gender}
+                  >
+                    <option value="">Choose</option>
+                    {WAITLIST_GENDERS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  I want to meet
+                  <select
+                    aria-invalid={invalid("seeking")}
+                    name="seeking"
+                    onChange={updateField}
+                    required
+                    value={form.seeking}
+                  >
+                    <option value="">Choose</option>
+                    {WAITLIST_SEEKING.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="checkbox-row">
+                <input
+                  aria-invalid={invalid("adult_confirmed")}
+                  checked={form.adult_confirmed}
+                  name="adult_confirmed"
+                  onChange={updateField}
+                  type="checkbox"
+                />
+                <span>I am 18 or older</span>
+              </label>
+              <label aria-hidden="true" className="contact-honeypot">
+                Website
+                <input
+                  autoComplete="off"
+                  name="website"
+                  onChange={updateField}
+                  tabIndex={-1}
+                  value={form.website}
+                />
+              </label>
+              <TurnstileWidget
+                action="waitlist_form"
+                onStatusChange={updateTurnstileStatus}
+                onToken={updateTurnstileToken}
+                ref={turnstileRef}
+              />
+              {["unavailable", "error", "expired"].includes(turnstileStatus) ? (
+                <p className="form-feedback error">
+                  Security verification is unavailable. Try again later.
+                </p>
+              ) : null}
+              {submitState.status === "error" ? (
+                <p className="form-feedback error" role="alert">
+                  {submitState.errorMessage}
+                </p>
+              ) : null}
+              <button aria-busy={submitState.status === "submitting"} type="submit">
+                {submitState.status === "submitting" ? "Joining..." : "Join the waitlist"}
+              </button>
+              <p className="form-note">
+                Free to join. One email when your city opens; no spam, no sharing.{" "}
+                <a href="/privacy-policy#waitlist">Privacy</a>
+              </p>
+            </form>
+          )}
+        </div>
+
+        <div className="waitlist-points">
+          <ul>
+            <li>
+              <strong>One city at a time.</strong> We open first where the most people sign up.
+            </li>
+            <li>
+              <strong>One email.</strong> We write once, when your city opens. Nothing else.
+            </li>
+            <li>
+              <strong>Counts only.</strong> Your answers tell us how many people want to meet
+              whom, nothing more.
+            </li>
+          </ul>
+          <p className="waitlist-cities-label">Opening first in</p>
+          <div className="waitlist-cities">
+            {pilotCities.map((city) => (
+              <button
+                aria-pressed={form.city_slug === city.slug}
+                key={city.slug}
+                onClick={() => pickCity(city.slug)}
+                type="button"
+              >
+                {city.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );
