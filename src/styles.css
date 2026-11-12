@@ -6483,7 +6483,7 @@ html[data-theme="dark"] .look-c .waitlist-section {
 .look-c .waitlist-card select {
   border-color: rgba(31, 23, 34, 0.35);
   border-radius: 4px;
-  background: #fff;
+  background-color: #fff;
   color: #1f1722;
 }
 
@@ -6827,5 +6827,74 @@ html[data-theme="dark"] .look-c .waitlist-section {
 @media (max-width: 600px) {
   .look-c .waitlist-card {
     box-shadow: 0 16px 36px rgba(60, 20, 40, 0.14);
+  }
+}
+
+/* Shared fixes for every look (critic notes r1-r2): a one-line share link, the
+   done panel centred in the space the form held, and on phones Age / I am a /
+   I want to meet in one row. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Every waitlist select draws its own chevron, so its padding is the real
+   room for the text (the native arrow sits on top of the padding). */
+.waitlist-card select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238a7f88' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 12px 8px;
+}
+
+.waitlist-share-link {
+  display: block;
+  overflow: hidden;
+  padding: 13px 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  /* Widths follow the longest option in each: 18-20, Nonbinary, Everyone. */
+  .waitlist-row {
+    grid-template-columns: minmax(0, 84fr) minmax(0, 107fr) minmax(0, 97fr);
+    gap: 8px;
+    align-items: end;
+  }
+
+  .waitlist-row label:last-child {
+    grid-column: auto;
+  }
+
+  .waitlist-row label {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .waitlist-row select {
+    padding-left: 8px;
+    padding-right: 22px;
+    background-position: right 8px center;
+  }
+}
+
+/* Narrow phones (<= 370px): too tight for three across, back to two + one. */
+@media (max-width: 370px) {
+  .waitlist-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  .waitlist-row label:last-child {
+    grid-column: 1 / -1;
   }
 }

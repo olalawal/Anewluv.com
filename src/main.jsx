@@ -673,8 +673,9 @@ function App() {
 
   return (
     <>
-      {/* On the waitlist page the sign-up button is the one strong action. */}
-      <SiteHeader onToggleTheme={toggleTheme} quietCta={path === "/waitlist"} theme={theme} />
+      {/* The waitlist page has one goal: a slim header (brand, theme, a quiet
+          "Open app") so the sign-up button is the one strong action. */}
+      <SiteHeader onToggleTheme={toggleTheme} slim={path === "/waitlist"} theme={theme} />
       {page}
       <Footer />
       <CookieNotice />
@@ -700,31 +701,34 @@ function routeFor(path) {
   return <HomePage />;
 }
 
-function SiteHeader({ onToggleTheme, quietCta = false, theme }) {
+function SiteHeader({ onToggleTheme, slim = false, theme }) {
   // Phones (<= 720px) keep one short header row: brand, "Open app" and a
   // Menu button; the nav links and the theme switch open below it.
+  // slim: brand, theme switch and a quiet "Open app" only (no nav, social or menu).
   const [menuOpen, setMenuOpen] = React.useState(false);
   const nextTheme = theme === "dark" ? "light" : "dark";
   const themeLabel = `Switch site and app previews to ${nextTheme} mode`;
   return (
-    <header className={`site-header${menuOpen ? " menu-open" : ""}`}>
+    <header className={`site-header${menuOpen ? " menu-open" : ""}${slim ? " slim" : ""}`}>
       <a className="brand" href="/">
         <img className="brand-mark" src={logoSrc} alt="" />
         <span>Anewluv</span>
       </a>
-      <nav aria-label="Main navigation" id="site-nav">
-        {primaryNavItems.map(([label, href]) => (
-          <a key={href} href={href}>
-            {label}
-          </a>
-        ))}
-        <button className="nav-theme-toggle" type="button" onClick={onToggleTheme} aria-label={themeLabel}>
-          <IconGlyph type={nextTheme === "light" ? "sun" : "moon"} />
-          <span>{nextTheme === "light" ? "Light mode" : "Dark mode"}</span>
-        </button>
-      </nav>
+      {slim ? null : (
+        <nav aria-label="Main navigation" id="site-nav">
+          {primaryNavItems.map(([label, href]) => (
+            <a key={href} href={href}>
+              {label}
+            </a>
+          ))}
+          <button className="nav-theme-toggle" type="button" onClick={onToggleTheme} aria-label={themeLabel}>
+            <IconGlyph type={nextTheme === "light" ? "sun" : "moon"} />
+            <span>{nextTheme === "light" ? "Light mode" : "Dark mode"}</span>
+          </button>
+        </nav>
+      )}
       <div className="header-actions">
-        <SocialLinks compact label="Social links" />
+        {slim ? null : <SocialLinks compact label="Social links" />}
         <button
           className="theme-toggle"
           type="button"
@@ -734,18 +738,20 @@ function SiteHeader({ onToggleTheme, quietCta = false, theme }) {
         >
           <IconGlyph type={theme === "dark" ? "sun" : "moon"} />
         </button>
-        <a className={`header-cta${quietCta ? " quiet" : ""}`} href={APP_BASE_URL}>
+        <a className={`header-cta${slim ? " quiet" : ""}`} href={APP_BASE_URL}>
           Open app
         </a>
-        <button
-          aria-controls="site-nav"
-          aria-expanded={menuOpen}
-          className="menu-toggle"
-          onClick={() => setMenuOpen((open) => !open)}
-          type="button"
-        >
-          {menuOpen ? "Close" : "Menu"}
-        </button>
+        {slim ? null : (
+          <button
+            aria-controls="site-nav"
+            aria-expanded={menuOpen}
+            className="menu-toggle"
+            onClick={() => setMenuOpen((open) => !open)}
+            type="button"
+          >
+            {menuOpen ? "Close" : "Menu"}
+          </button>
+        )}
       </div>
     </header>
   );
@@ -2912,7 +2918,7 @@ async function copyText(text, fallbackNode) {
   }
 }
 
-function WaitlistDone({ citySlug, minHeight, onAnother }) {
+function WaitlistDone({ citySlug, onAnother }) {
   const panelRef = React.useRef(null);
   const linkRef = React.useRef(null);
   const [copied, setCopied] = React.useState(false);
@@ -2938,7 +2944,6 @@ function WaitlistDone({ citySlug, minHeight, onAnother }) {
       className="waitlist-done"
       ref={panelRef}
       role="status"
-      style={minHeight ? { minHeight } : undefined}
       tabIndex={-1}
     >
       <span className="waitlist-done-icon" aria-hidden="true">
@@ -2946,13 +2951,11 @@ function WaitlistDone({ citySlug, minHeight, onAnother }) {
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
       </span>
-      <h2>
+      {/* The page heading above now says "You're on the list"; this line is
+          for screen readers, which announce the panel when it takes focus. */}
+      <h2 className="visually-hidden">
         {named ? `You're on the list for ${keepCityTogether(city.label)}.` : "You're on the list."}
       </h2>
-      <p>
-        We'll email you once when Anewluv opens {named ? "there" : "near you"}. That is the only
-        email we send.
-      </p>
       <div className="waitlist-share">
         <p>
           {named
@@ -2960,14 +2963,9 @@ function WaitlistDone({ citySlug, minHeight, onAnother }) {
             : "Know someone who should join? Send them this link:"}
         </p>
         <div className="waitlist-share-row">
-          <span className="waitlist-share-link" ref={linkRef}>
-            {/* Line breaks only after ? and &, never inside a city name. */}
-            {shownUrl.split(/(?<=[?&])/).map((part) => (
-              <React.Fragment key={part}>
-                {part}
-                <wbr />
-              </React.Fragment>
-            ))}
+          {/* One line; a long link ends in "…" and Copy link copies all of it. */}
+          <span className="waitlist-share-link" ref={linkRef} title={shownUrl}>
+            {shownUrl}
           </span>
           <button className={copied ? "is-copied" : undefined} type="button" onClick={copyLink}>
             {copied ? "Copied" : "Copy link"}
@@ -2981,7 +2979,7 @@ function WaitlistDone({ citySlug, minHeight, onAnother }) {
   );
 }
 
-const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "", formHeight: 0 };
+const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "" };
 
 const WAITLIST_LOOKS = {
   base: { eyebrow: "Waitlist", headline: "Join the Anewluv waitlist for your city", pin: "" },
@@ -3101,9 +3099,7 @@ function WaitlistPage() {
       turnstileRef.current?.reset();
 
       if (response?.ok) {
-        // The confirmation keeps the form's height so the page does not jump.
-        const formHeight = formRef.current?.offsetHeight || 0;
-        setSubmitState({ ...WAITLIST_IDLE, status: "success", citySlug, formHeight });
+        setSubmitState({ ...WAITLIST_IDLE, status: "success", citySlug });
         setForm((current) => ({
           ...current,
           email: "",
@@ -3146,6 +3142,9 @@ function WaitlistPage() {
       </span>
     ) : null;
   const emptyClass = (value) => (value ? undefined : "is-empty");
+  const joined = submitState.status === "success";
+  const joinedCityRaw = joined ? findWaitlistCity(submitState.citySlug) : null;
+  const joinedCity = joinedCityRaw && joinedCityRaw.slug !== "other" ? joinedCityRaw : null;
 
   return (
     <main className={`page waitlist-page${look ? ` look-${look}` : ""}`}>
@@ -3182,9 +3181,14 @@ function WaitlistPage() {
             </p>
           ) : null}
           {copy.eyebrow ? <p className="eyebrow">{copy.eyebrow}</p> : null}
-          <h1>{copy.headline}</h1>
+          {/* After a sign-up the heading says it worked, so the page stops asking. */}
+          <h1>{joined ? "You're on the list." : copy.headline}</h1>
           <p className="waitlist-lead">
-            Tell us where you are. We will email you once when Anewluv opens in your city.
+            {joined
+              ? `We'll email you once when Anewluv opens ${
+                  joinedCity ? `in ${keepCityTogether(joinedCity.label)}` : "near you"
+                }. That is the only email we send.`
+              : "Tell us where you are. We will email you once when Anewluv opens in your city."}
           </p>
         </div>
 
@@ -3192,7 +3196,6 @@ function WaitlistPage() {
           {submitState.status === "success" ? (
             <WaitlistDone
               citySlug={submitState.citySlug}
-              minHeight={submitState.formHeight}
               onAnother={signUpAnother}
             />
           ) : (
