@@ -5758,7 +5758,51 @@ footer > span {
 }
 
 .waitlist-card .form-note {
+  color: var(--muted);
+  font-size: 14px;
   text-align: center;
+}
+
+.waitlist-card select.is-empty {
+  color: var(--muted);
+}
+
+.waitlist-card select option {
+  color: var(--ink);
+}
+
+.waitlist-photo {
+  position: relative;
+  margin: 0 0 26px;
+}
+
+.waitlist-photo img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border-radius: 16px;
+  object-fit: cover;
+  object-position: center 35%;
+  box-shadow: var(--shadow);
+}
+
+.waitlist-photo figcaption {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  border-radius: 16px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f1722;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.header-cta.quiet {
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+  color: var(--ink);
+  box-shadow: none;
 }
 
 .waitlist-done {
@@ -5772,20 +5816,40 @@ footer > span {
 .waitlist-done-icon {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: rgba(35, 140, 114, 0.14);
+  background: var(--rose);
+  box-shadow: 0 0 0 8px rgba(232, 50, 124, 0.14), 0 14px 30px rgba(232, 50, 124, 0.28);
+  animation: waitlistPop 420ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 
 .waitlist-done-icon svg {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   fill: none;
-  stroke: #1a8a6c;
-  stroke-width: 2.6;
+  stroke: white;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+@keyframes waitlistPop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waitlist-done-icon {
+    animation: none;
+  }
 }
 
 .waitlist-done h2 {
@@ -5821,10 +5885,24 @@ footer > span {
   gap: 8px;
 }
 
-.waitlist-share-row input {
+.waitlist-share-link {
+  display: flex;
+  align-items: center;
   min-height: 48px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 8px 14px;
+  background: var(--card-bg);
+  color: var(--ink);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+  user-select: all;
+}
+
+.waitlist-share-row button.is-copied {
+  background: #1a8a6c;
 }
 
 .waitlist-share-row button,
@@ -5884,12 +5962,33 @@ footer > span {
     border-radius: 14px;
   }
 
-  .waitlist-row,
+  .waitlist-intro .eyebrow {
+    display: none;
+  }
+
+  .waitlist-card form {
+    gap: 14px;
+  }
+
+  .waitlist-card input,
+  .waitlist-card select {
+    min-height: 48px;
+  }
+
+  .waitlist-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  .waitlist-row label:last-child {
+    grid-column: 1 / -1;
+  }
+
   .waitlist-share-row {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .waitlist-row {
-    gap: 18px;
+  .waitlist-photo img {
+    height: 180px;
   }
 }

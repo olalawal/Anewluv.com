@@ -39,6 +39,7 @@ for (const profile of profiles) {
     recordVideo: { dir: videoDir, size: profile.viewport },
     viewport: profile.viewport,
   });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: SITE });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));
@@ -54,6 +55,12 @@ for (const profile of profiles) {
     // The phone cookie banner sits at the end of the page; start from the top.
     await page.evaluate(() => window.scrollTo(0, 0));
     await pause(1600);
+    if (index === 0) {
+      // Show the error state once: pressing Join with no email names the field.
+      await page.getByRole("button", { name: "Join the waitlist" }).click();
+      await page.locator(".form-feedback.error").waitFor();
+      await pause(1400);
+    }
 
     await page.locator('input[name="email"]').pressSequentially(
       signup.email.replace("{p}", profile.name),
@@ -80,14 +87,17 @@ for (const profile of profiles) {
       if (done) break;
     }
     await success.waitFor({ timeout: 15000 });
-    await pause(3000);
+    await pause(1500);
+    await page.getByRole("button", { name: "Copy link" }).click();
+    await page.getByRole("button", { name: "Copied" }).waitFor();
+    await pause(1500);
   }
 
   await page.goto(`${MOCK}/counts-view`);
   await page.locator("table").first().waitFor();
   await pause(2500);
   await page.mouse.wheel(0, 700);
-  await pause(2500);
+  await pause(1500);
   if (errors.length) throw new Error(`Browser errors: ${errors.join(" | ")}`);
 
   const video = page.video();
