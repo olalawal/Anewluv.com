@@ -15,6 +15,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 
 import { WAITLIST_AGE_BANDS, WAITLIST_CITIES, WAITLIST_GENDERS, WAITLIST_SEEKING } from "../src/waitlist-shared.js";
+import { renderCountsPage } from "./waitlist-counts-view.mjs";
 
 const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 8789);
@@ -130,17 +131,13 @@ function counts() {
   };
 }
 
-const COUNTS_PAGE = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Waitlist counts (local test)</title>
-<body style="font:14px/1.5 system-ui;margin:24px;background:#fff;color:#111">
-<h1 style="font-size:20px">Waitlist counts (local test data only, no emails)</h1>
-<pre id="out" style="white-space:pre-wrap;word-break:break-word;background:#f4f4f6;padding:16px;border-radius:8px">loading...</pre>
-<script>fetch("/counts").then(r=>r.json()).then(j=>{document.getElementById("out").textContent=JSON.stringify(j,null,2)})</script>`;
+// The readable counts page is rendered server-side from the same counts JSON.
+
 
 const server = createServer((req, res) => {
   const { pathname } = new URL(req.url || "/", `http://${HOST}:${PORT}`);
   if (req.method === "GET" && pathname === "/counts") return send(res, 200, counts());
-  if (req.method === "GET" && pathname === "/counts-view") return send(res, 200, COUNTS_PAGE, "text/html; charset=utf-8");
+  if (req.method === "GET" && pathname === "/counts-view") return send(res, 200, renderCountsPage(counts()), "text/html; charset=utf-8");
   if (req.method === "POST" && pathname === "/api/waitlist/join_public") {
     const chunks = [];
     req.on("data", (chunk) => chunks.push(chunk));

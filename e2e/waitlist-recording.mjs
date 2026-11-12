@@ -23,8 +23,8 @@ const profiles = [
   { name: "phone", viewport: { width: 390, height: 844 }, ip: "198.51.100.12", mobile: true },
 ];
 const signups = [
-  { city: "missoula-mt", label: "Missoula, MT", email: "wl-test-{p}-1@mail.invalid", age: "21-29", gender: "woman", seeking: "men" },
-  { city: "denver-co", label: "Denver, CO", email: "wl-test-{p}-2@mail.invalid", age: "30-44", gender: "man", seeking: "women" },
+  { city: "missoula-mt", src: "x", label: "Missoula, MT", email: "wl-test-{p}-1@mail.invalid", age: "21-29", gender: "woman", seeking: "men" },
+  { city: "denver-co", src: "reddit", label: "Denver, CO", email: "wl-test-{p}-2@mail.invalid", age: "30-44", gender: "man", seeking: "women" },
 ];
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -44,7 +44,7 @@ for (const profile of profiles) {
   page.on("pageerror", (error) => errors.push(String(error)));
 
   for (const [index, signup] of signups.entries()) {
-    await page.goto(`${SITE}/waitlist?city=${signup.city}`);
+    await page.goto(`${SITE}/waitlist?city=${signup.city}&src=${signup.src}`);
     await page.locator('select[name="city_slug"]').waitFor();
     if (index === 0) {
       await page.getByRole("button", { name: "Accept" }).click().catch(() => {});
@@ -88,8 +88,10 @@ for (const profile of profiles) {
   }
 
   await page.goto(`${MOCK}/counts-view`);
-  await page.waitForFunction(() => !document.getElementById("out").textContent.includes("loading"));
-  await pause(4000);
+  await page.locator("table").first().waitFor();
+  await pause(2500);
+  await page.mouse.wheel(0, 700);
+  await pause(2500);
   if (errors.length) throw new Error(`Browser errors: ${errors.join(" | ")}`);
 
   const video = page.video();
