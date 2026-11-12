@@ -4,8 +4,9 @@ import {
   WAITLIST_AGE_BANDS,
   WAITLIST_GENDERS,
   WAITLIST_SEEKING,
+  channelSourceTag,
+  emailLocalPartFits,
   findWaitlistCity,
-  sanitizeSourceTag,
 } from "../../src/waitlist-shared.js";
 
 // Safety model mirrors netlify/functions/contact.js: POST only, bounded body,
@@ -167,7 +168,8 @@ export function validateWaitlistPayload(payload) {
     !email ||
     email.length > MAX_EMAIL_LENGTH ||
     email.includes("..") ||
-    !EMAIL_RE.test(email)
+    !EMAIL_RE.test(email) ||
+    !emailLocalPartFits(email)
   ) {
     return { error: "invalid_email", status: 400 };
   }
@@ -199,7 +201,7 @@ export function validateWaitlistPayload(payload) {
       email,
       gender,
       seeking,
-      source_tag: sanitizeSourceTag(payload.source_tag),
+      source_tag: channelSourceTag(payload.source_tag),
       turnstileToken,
       website,
     },

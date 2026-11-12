@@ -7,7 +7,8 @@ import {
   WAITLIST_GENDERS,
   WAITLIST_SEEKING,
   findWaitlistCity,
-  sanitizeSourceTag,
+  channelSourceTag,
+  emailLocalPartFits,
 } from "./waitlist-shared.js";
 
 const purchaseCopy =
@@ -2862,7 +2863,7 @@ function ContactSection({ mode = "contact" }) {
 function WaitlistPage() {
   const params = React.useMemo(() => new URLSearchParams(window.location.search), []);
   const rawCity = params.get("city") || "";
-  const sourceTag = sanitizeSourceTag(rawCity);
+  const sourceTag = channelSourceTag(params.get("src"));
   const presetCity = findWaitlistCity(rawCity.trim().toLowerCase())?.slug || "";
   const turnstileRef = React.useRef(null);
   const [form, setForm] = React.useState({
@@ -2889,6 +2890,7 @@ function WaitlistPage() {
     submitState.status !== "submitting" &&
     isValidEmail(trimmedEmail) &&
     trimmedEmail.length <= 254 &&
+    emailLocalPartFits(trimmedEmail) &&
     Boolean(form.city_slug && form.age_band && form.gender && form.seeking) &&
     form.adult_confirmed &&
     Boolean(turnstileToken);

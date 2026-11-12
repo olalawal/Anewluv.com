@@ -9,7 +9,14 @@ import handler, {
   waitlistSubmissionKey,
 } from "../netlify/functions/waitlist.js";
 import cities from "../src/data/waitlist-cities.json" with { type: "json" };
-import { WAITLIST_CITIES, findWaitlistCity, sanitizeSourceTag } from "../src/waitlist-shared.js";
+import {
+  DIRECT_SOURCE_TAG,
+  WAITLIST_CITIES,
+  channelSourceTag,
+  emailLocalPartFits,
+  findWaitlistCity,
+  sanitizeSourceTag,
+} from "../src/waitlist-shared.js";
 
 const ORIGINAL_FETCH = globalThis.fetch;
 const ENV_NAMES = [
@@ -27,7 +34,7 @@ const validPayload = {
   email: "  Person@Example.com ",
   gender: "woman",
   seeking: "everyone",
-  source_tag: "missoula-mt",
+  source_tag: "x",
   turnstile_token: "valid-token",
   website: "",
 };
@@ -215,6 +222,47 @@ test("invalid city, age band, gender, seeking, email and missing confirmations a
     const response = await handler(request({ ...validPayload, ...patch }), context());
     assert.equal(response.status, status, JSON.stringify(patch));
   }
+  assert.equal(calls.length, 0);
+});
+
+test("the channel tag (?src=) defaults to direct and is cleaned", () => {
+  assert.equal(channelSourceTag("x"), "x");
+  assert.equal(channelSourceTag("Reddit"), "reddit");
+  assert.equal(channelSourceTag(""), DIRECT_SOURCE_TAG);
+  assert.equal(channelSourceTag(null), DIRECT_SOURCE_TAG);
+  assert.equal(channelSourceTag("<>"), DIRECT_SOURCE_TAG);
+  assert.equal(DIRECT_SOURCE_TAG, "direct");
+});
+
+test("the channel tag reaches Xano, and a missing one is sent as direct", async () => {
+  setEnv();
+  const calls = installFetchMock();
+  for (const [sourceTag, expected] of [["x", "x"], [undefined, "direct"], ["", "direct"]]) {
+    resetWaitlistSecurityStateForTests();
+    const payload = { ...validPayload, source_tag: sourceTag };
+    if (sourceTag === undefined) delete payload.source_tag;
+    const response = await handler(request(payload), context());
+    assert.equal(response.status, 200, String(sourceTag));
+    const forwarded = calls.filter((call) => call.href.endsWith("/waitlist/join_public")).at(-1);
+    const body = JSON.parse(forwarded.options.body);
+    assert.equal(body.source_tag, expected);
+    assert.equal(body.city_slug, "missoula-mt", "the city keeps its own field");
+    assert.equal(body.submission_key, waitlistSubmissionKey(FAKE_KEY, body));
+  }
+});
+
+test("an email whose part before the @ is over 64 characters is refused, as Xano would", async () => {
+  assert.equal(emailLocalPartFits(`${"a".repeat(64)}@example.com`), true);
+  assert.equal(emailLocalPartFits(`${"a".repeat(65)}@example.com`), false);
+  assert.equal(emailLocalPartFits("no-at-sign"), false);
+  setEnv();
+  const calls = installFetchMock();
+  const response = await handler(
+    request({ ...validPayload, email: `${"a".repeat(65)}@example.com` }),
+    context(),
+  );
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { code: "invalid_email" });
   assert.equal(calls.length, 0);
 });
 
