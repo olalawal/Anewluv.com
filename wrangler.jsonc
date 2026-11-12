@@ -27,6 +27,13 @@
       "name": "CONTACT_RATE_LIMITER",
       "namespace_id": "4741",
       "simple": { "limit": 3, "period": 60 }
+    },
+    {
+      // Edge limit on POST /api/waitlist, keyed by client IP in worker/index.js.
+      // Absent-safe: the handler's own 3 per 180 s limit applies behind it.
+      "name": "WAITLIST_RATE_LIMITER",
+      "namespace_id": "5201",
+      "simple": { "limit": 3, "period": 60 }
     }
   ],
   "observability": { "enabled": true }

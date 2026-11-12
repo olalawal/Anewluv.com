@@ -1,13 +1,15 @@
 // Cloudflare Worker entry for anewluv.com.
 //
 // Static files in dist/ are served by the Workers static-assets layer
-// (see wrangler.jsonc). Only /api/* reaches this script. The three handlers are
-// the same modules Netlify ran, so the security behaviour of the contact form
-// stays in one reviewed place: netlify/functions/contact.js.
+// (see wrangler.jsonc). Only /api/* reaches this script. The handlers are the
+// same modules Netlify ran, so the security behaviour of the contact form and
+// the waitlist stays in reviewed places: netlify/functions/contact.js and
+// netlify/functions/waitlist.js.
 
 import appPreviewHandler from "../netlify/functions/app-preview.js";
 import contactHandler from "../netlify/functions/contact.js";
 import homepageProfilesHandler from "../netlify/functions/homepage-profiles.js";
+import waitlistHandler from "../netlify/functions/waitlist.js";
 
 // Location headers a client could forge. Cloudflare sets none of the x-nf-* or
 // x-vercel-* names, so anything arriving under them came from the caller.
@@ -75,6 +77,25 @@ async function contactRateLimited(request, env) {
   return !success;
 }
 
+// Edge limiter for the waitlist POST; absent-safe like the contact one, so tests
+// and local runs without the binding skip it and the handler's own limit applies.
+async function waitlistRateLimited(request, env) {
+  const limiter = env?.WAITLIST_RATE_LIMITER;
+  if (request.method !== "POST" || typeof limiter?.limit !== "function") return false;
+  const { success } = await limiter.limit({ key: clientIp(request) || "unknown-client" });
+  return !success;
+}
+
+async function handleWaitlist(request, env) {
+  if (await waitlistRateLimited(request, env)) {
+    return jsonResponse({ code: "rate_limited" }, 429);
+  }
+  return waitlistHandler(request, {
+    ip: clientIp(request),
+    requestId: String(request.headers.get("cf-ray") || ""),
+  });
+}
+
 async function handleContact(request, env) {
   if (await contactRateLimited(request, env)) {
     return jsonResponse({ code: "rate_limited" }, 429);
@@ -92,6 +113,7 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname === "/api/contact") return handleContact(request, env);
+    if (pathname === "/api/waitlist") return handleWaitlist(request, env);
     if (pathname === "/api/homepage-profiles") {
       return homepageProfilesHandler(requestWithTrustedGeo(request));
     }
