@@ -2946,16 +2946,16 @@ function WaitlistDone({ citySlug, onAnother }) {
       role="status"
       tabIndex={-1}
     >
-      <span className="waitlist-done-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path d="M5 12.5l4.5 4.5L19 7.5" />
-        </svg>
-      </span>
-      {/* The page heading above now says "You're on the list"; this line is
-          for screen readers, which announce the panel when it takes focus. */}
-      <h2 className="visually-hidden">
-        {named ? `You're on the list for ${keepCityTogether(city.label)}.` : "You're on the list."}
-      </h2>
+      <div className="waitlist-done-head">
+        <span className="waitlist-done-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        </span>
+        <h2>
+          {named ? `Saved for ${keepCityTogether(city.label)}.` : "Your spot is saved."}
+        </h2>
+      </div>
       <div className="waitlist-share">
         <p>
           {named

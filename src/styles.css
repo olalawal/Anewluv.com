@@ -6974,3 +6974,171 @@ html[data-theme="dark"] .look-c .waitlist-section {
     font-size: 15px;
   }
 }
+
+/* r5 (critic round on the owner's pick): the done card says what was saved
+   beside the tick; no load fades on the picked looks; C photos without the
+   hard black frame; A photo edge feathered, pin off the faces on phones. */
+.waitlist-done-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.waitlist-done-head .waitlist-done-icon {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 0 0 6px rgba(232, 50, 124, 0.14);
+}
+
+.waitlist-done-head .waitlist-done-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.waitlist-page .waitlist-done-head h2 {
+  margin: 0;
+  color: #1f1722;
+  font-family: "DM Serif Display", Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.look-a .waitlist-intro,
+.look-a .waitlist-card,
+.look-a .waitlist-points,
+.look-c .waitlist-masthead,
+.look-c .waitlist-intro,
+.look-c .waitlist-card,
+.look-c .waitlist-points {
+  animation: none;
+}
+
+/* C: the slim header takes the page's cream so the page reads as one sheet. */
+body:has(.look-c) .site-header.slim {
+  border-bottom-color: rgba(31, 23, 34, 0.12);
+  background: #fbf3ea;
+}
+
+html[data-theme="dark"] body:has(.look-c) .site-header.slim {
+  background: #1c1417;
+}
+
+.look-c .waitlist-photo img,
+.look-c .waitlist-cover {
+  border: 0;
+  border-radius: 6px;
+  background: #eadccd;
+}
+
+@media (hover: hover) {
+  .look-c .waitlist-card form button[type="submit"]:hover {
+    background: #c81e63;
+  }
+}
+
+@media (min-width: 981px) {
+  .look-c .waitlist-section {
+    gap: 22px clamp(36px, 5vw, 88px);
+    padding-top: 32px;
+  }
+
+  .look-c .waitlist-intro h1 {
+    font-size: clamp(56px, 6.2vw, 92px);
+  }
+
+  .look-c .waitlist-points {
+    padding-top: 20px;
+  }
+
+  .look-c .waitlist-photo img {
+    height: 300px;
+    min-height: 0;
+    object-position: 50% 32%;
+  }
+
+  /* A: a wider feather on the photo edge and a soft rose glow behind the form. */
+  .look-a .waitlist-section {
+    background:
+      radial-gradient(60% 70% at 88% 45%, rgba(232, 50, 124, 0.16), rgba(232, 50, 124, 0) 70%),
+      #1b0f18;
+  }
+
+  .look-a .waitlist-hero-photo {
+    -webkit-mask-image: linear-gradient(90deg, #000 62%, transparent 100%),
+      linear-gradient(180deg, #000 40%, transparent 98%);
+    mask-image: linear-gradient(90deg, #000 62%, transparent 100%),
+      linear-gradient(180deg, #000 40%, transparent 98%);
+  }
+
+  .look-a .waitlist-intro {
+    margin-top: clamp(130px, calc((100vw - 470px) * 0.31 - 110px), 320px);
+  }
+
+  .look-a .waitlist-pin {
+    background: rgba(24, 10, 20, 0.6);
+  }
+}
+
+@media (max-width: 600px) {
+  /* C: a full-width photo band under the headline; the lead returns after a sign-up. */
+  .look-c .waitlist-cover {
+    float: none;
+    width: 100%;
+    height: 150px;
+    margin: 14px 0 0;
+    object-position: 50% 30%;
+  }
+
+  .look-c:not(.is-joined) .waitlist-lead {
+    display: none;
+  }
+
+  .look-c.is-joined .waitlist-cover {
+    display: none;
+  }
+
+  .look-c.is-joined .waitlist-intro h1 {
+    font-size: 40px;
+  }
+
+  /* A: a taller photo band, the pin off the faces, a darker base under the headline. */
+  .look-a .waitlist-hero-photo,
+  .look-a .waitlist-section::before {
+    height: 300px;
+  }
+
+  .look-a .waitlist-hero-photo {
+    object-position: 58% 12%;
+  }
+
+  .look-a .waitlist-section::before {
+    background: linear-gradient(0deg, rgba(24, 10, 20, 0.9) 0%, rgba(24, 10, 20, 0.45) 40%, rgba(24, 10, 20, 0) 65%);
+  }
+
+  .look-a .waitlist-pin {
+    display: none;
+  }
+
+  .look-a .waitlist-card input,
+  .look-a .waitlist-card select {
+    border-color: #cdb8c4;
+  }
+}
+
+/* A: the slim header takes the hero's plum, so the photo is not under a white strip. */
+body:has(.look-a) .site-header.slim {
+  --ink: #fff8fb;
+  --line: rgba(255, 240, 248, 0.16);
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --header-bg: #1b0f18;
+  border-bottom-color: transparent;
+  color: #fff8fb;
+}
+
+@media (max-width: 600px) {
+  .look-c .waitlist-cover {
+    height: 132px;
+  }
+}
