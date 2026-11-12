@@ -6898,3 +6898,66 @@ html[data-theme="dark"] .look-c .waitlist-section {
     grid-column: 1 / -1;
   }
 }
+
+/* r4 (owner pick 2026-11-12: C main, A for a second market). */
+.look-c .waitlist-cover {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* C: a small cover photo beside the lead, so the first screen has a face in it. */
+  .look-c .waitlist-cover {
+    display: block;
+    float: right;
+    width: 112px;
+    height: 128px;
+    margin: 2px 0 4px 14px;
+    border: 1px solid currentColor;
+    object-fit: cover;
+    object-position: 52% 28%;
+  }
+
+  .look-c .waitlist-photo {
+    display: none;
+  }
+}
+
+@media (min-width: 981px) {
+  /* A: the photo keeps its own shape on the left and fades into the plum,
+     so the form never sits over a face; the headline sits under the faces. */
+  .look-a .waitlist-section {
+    align-items: start;
+  }
+
+  .look-a .waitlist-hero-photo {
+    inset: 0 auto auto 0;
+    width: calc(100% - 470px);
+    height: auto;
+    aspect-ratio: 1672 / 941;
+    object-position: 50% 30%;
+    -webkit-mask-image: linear-gradient(90deg, #000 78%, transparent 100%),
+      linear-gradient(180deg, #000 40%, transparent 98%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(90deg, #000 78%, transparent 100%),
+      linear-gradient(180deg, #000 40%, transparent 98%);
+    mask-composite: intersect;
+  }
+
+  .look-a .waitlist-section::before {
+    background: linear-gradient(90deg, rgba(24, 10, 20, 0.5) 0%, rgba(24, 10, 20, 0) 45%);
+  }
+
+  .look-a .waitlist-intro {
+    align-self: start;
+    margin-top: clamp(150px, calc((100vw - 470px) * 0.31 - 70px), 360px);
+  }
+
+  .look-a .waitlist-intro h1 {
+    font-size: clamp(48px, 4.6vw, 68px);
+    line-height: 1;
+  }
+
+  .look-a .waitlist-card {
+    align-self: center;
+  }
+}

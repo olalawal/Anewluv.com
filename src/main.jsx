@@ -3183,6 +3183,16 @@ function WaitlistPage() {
           {copy.eyebrow ? <p className="eyebrow">{copy.eyebrow}</p> : null}
           {/* After a sign-up the heading says it worked, so the page stops asking. */}
           <h1>{joined ? "You're on the list." : copy.headline}</h1>
+          {/* Look C on phones: a small cover photo beside the lead, so the first screen is not text only. */}
+          {look === "c" ? (
+            <img
+              alt=""
+              className="waitlist-cover"
+              decoding="async"
+              fetchpriority="high"
+              src={lifestyleImages.cafe}
+            />
+          ) : null}
           <p className="waitlist-lead">
             {joined
               ? `We'll email you once when Anewluv opens ${
