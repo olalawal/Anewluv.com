@@ -673,7 +673,8 @@ function App() {
 
   return (
     <>
-      <SiteHeader onToggleTheme={toggleTheme} theme={theme} />
+      {/* On the waitlist page the sign-up button is the one strong action. */}
+      <SiteHeader onToggleTheme={toggleTheme} quietCta={path === "/waitlist"} theme={theme} />
       {page}
       <Footer />
       <CookieNotice />
@@ -699,7 +700,7 @@ function routeFor(path) {
   return <HomePage />;
 }
 
-function SiteHeader({ onToggleTheme, theme }) {
+function SiteHeader({ onToggleTheme, quietCta = false, theme }) {
   // Phones (<= 720px) keep one short header row: brand, "Open app" and a
   // Menu button; the nav links and the theme switch open below it.
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -733,7 +734,7 @@ function SiteHeader({ onToggleTheme, theme }) {
         >
           <IconGlyph type={theme === "dark" ? "sun" : "moon"} />
         </button>
-        <a className="header-cta" href={APP_BASE_URL}>
+        <a className={`header-cta${quietCta ? " quiet" : ""}`} href={APP_BASE_URL}>
           Open app
         </a>
         <button
@@ -2878,36 +2879,67 @@ function ContactSection({ mode = "contact" }) {
   );
 }
 
-function WaitlistDone({ citySlug, onAnother }) {
+// Share links always point at the public site, never a preview or local host.
+const WAITLIST_SHARE_ORIGIN = import.meta.env.VITE_SITE_ORIGIN || "https://anewluv.com";
+
+// Keep "Missoula, MT" on one line in headlines.
+const keepCityTogether = (label) => label.replace(", ", ", ");
+
+async function copyText(text, fallbackNode) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Blocked or missing clipboard access: select the visible link and copy it.
+    if (!fallbackNode) return false;
+    const range = document.createRange();
+    range.selectNodeContents(fallbackNode);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const copied = document.execCommand?.("copy") ?? false;
+    selection.removeAllRanges();
+    return copied;
+  }
+}
+
+function WaitlistDone({ citySlug, minHeight, onAnother }) {
   const panelRef = React.useRef(null);
+  const linkRef = React.useRef(null);
   const [copied, setCopied] = React.useState(false);
   const city = findWaitlistCity(citySlug);
   const named = Boolean(city && city.slug !== "other");
   const shareQuery = new URLSearchParams(named ? { city: city.slug, src: "share" } : { src: "share" });
-  const shareUrl = `${window.location.origin}/waitlist?${shareQuery}`;
+  const shareUrl = `${WAITLIST_SHARE_ORIGIN}/waitlist?${shareQuery}`;
+  const shownUrl = shareUrl.replace(/^https?:\/\//, "");
 
   React.useEffect(() => {
     panelRef.current?.focus({ preventScroll: true });
-    panelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // One instant move (a smooth scroll passes under the sticky header);
+    // scroll-margin-top keeps the panel clear of the header.
+    panelRef.current?.scrollIntoView({ block: "nearest" });
   }, []);
 
   const copyLink = React.useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+    setCopied(await copyText(shareUrl, linkRef.current));
   }, [shareUrl]);
 
   return (
-    <div className="waitlist-done" ref={panelRef} role="status" tabIndex={-1}>
+    <div
+      className="waitlist-done"
+      ref={panelRef}
+      role="status"
+      style={minHeight ? { minHeight } : undefined}
+      tabIndex={-1}
+    >
       <span className="waitlist-done-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false">
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
       </span>
-      <h2>{named ? `You're on the list for ${city.label}.` : "You're on the list."}</h2>
+      <h2>
+        {named ? `You're on the list for ${keepCityTogether(city.label)}.` : "You're on the list."}
+      </h2>
       <p>
         We'll email you once when Anewluv opens {named ? "there" : "near you"}. That is the only
         email we send.
@@ -2915,17 +2947,20 @@ function WaitlistDone({ citySlug, onAnother }) {
       <div className="waitlist-share">
         <p>
           {named
-            ? `Know someone in ${city.label}? Send them this link:`
+            ? `Know someone in ${keepCityTogether(city.label)}? Send them this link:`
             : "Know someone who should join? Send them this link:"}
         </p>
         <div className="waitlist-share-row">
-          <input
-            aria-label="Waitlist link to share"
-            onFocus={(event) => event.target.select()}
-            readOnly
-            value={shareUrl}
-          />
-          <button type="button" onClick={copyLink}>
+          <span className="waitlist-share-link" ref={linkRef}>
+            {/* Line breaks only after ? and &, never inside a city name. */}
+            {shownUrl.split(/(?<=[?&])/).map((part) => (
+              <React.Fragment key={part}>
+                {part}
+                <wbr />
+              </React.Fragment>
+            ))}
+          </span>
+          <button className={copied ? "is-copied" : undefined} type="button" onClick={copyLink}>
             {copied ? "Copied" : "Copy link"}
           </button>
         </div>
@@ -2937,7 +2972,7 @@ function WaitlistDone({ citySlug, onAnother }) {
   );
 }
 
-const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "" };
+const WAITLIST_IDLE = { status: "idle", citySlug: "", errorMessage: "", errorField: "", formHeight: 0 };
 
 function WaitlistPage() {
   const params = React.useMemo(() => new URLSearchParams(window.location.search), []);
@@ -3001,7 +3036,7 @@ function WaitlistPage() {
       if (submitState.status === "submitting") return;
       if (missing) {
         const [field, message] = missing;
-        setSubmitState({ status: "error", citySlug: "", errorMessage: message, errorField: field });
+        setSubmitState({ ...WAITLIST_IDLE, status: "error", errorMessage: message, errorField: field });
         formRef.current?.elements.namedItem(field)?.focus();
         return;
       }
@@ -3031,7 +3066,9 @@ function WaitlistPage() {
       turnstileRef.current?.reset();
 
       if (response?.ok) {
-        setSubmitState({ ...WAITLIST_IDLE, status: "success", citySlug });
+        // The confirmation keeps the form's height so the page does not jump.
+        const formHeight = formRef.current?.offsetHeight || 0;
+        setSubmitState({ ...WAITLIST_IDLE, status: "success", citySlug, formHeight });
         setForm((current) => ({
           ...current,
           email: "",
@@ -3064,6 +3101,7 @@ function WaitlistPage() {
   const signUpAnother = React.useCallback(() => setSubmitState(WAITLIST_IDLE), []);
   const pilotCities = WAITLIST_CITIES.filter((city) => city.slug !== "other");
   const invalid = (name) => (submitState.errorField === name ? true : undefined);
+  const emptyClass = (value) => (value ? undefined : "is-empty");
 
   return (
     <main className="page">
@@ -3078,13 +3116,18 @@ function WaitlistPage() {
 
         <div className="waitlist-card">
           {submitState.status === "success" ? (
-            <WaitlistDone citySlug={submitState.citySlug} onAnother={signUpAnother} />
+            <WaitlistDone
+              citySlug={submitState.citySlug}
+              minHeight={submitState.formHeight}
+              onAnother={signUpAnother}
+            />
           ) : (
             <form className="waitlist-form" noValidate onSubmit={handleSubmit} ref={formRef}>
               <label>
                 City
                 <select
                   aria-invalid={invalid("city_slug")}
+                  className={emptyClass(form.city_slug)}
                   name="city_slug"
                   onChange={updateField}
                   required
@@ -3103,6 +3146,7 @@ function WaitlistPage() {
                 <input
                   aria-invalid={invalid("email")}
                   autoComplete="email"
+                  inputMode="email"
                   maxLength={254}
                   name="email"
                   onChange={updateField}
@@ -3117,6 +3161,7 @@ function WaitlistPage() {
                   Age
                   <select
                     aria-invalid={invalid("age_band")}
+                    className={emptyClass(form.age_band)}
                     name="age_band"
                     onChange={updateField}
                     required
@@ -3134,6 +3179,7 @@ function WaitlistPage() {
                   I am a
                   <select
                     aria-invalid={invalid("gender")}
+                    className={emptyClass(form.gender)}
                     name="gender"
                     onChange={updateField}
                     required
@@ -3151,6 +3197,7 @@ function WaitlistPage() {
                   I want to meet
                   <select
                     aria-invalid={invalid("seeking")}
+                    className={emptyClass(form.seeking)}
                     name="seeking"
                     onChange={updateField}
                     required
@@ -3213,6 +3260,14 @@ function WaitlistPage() {
         </div>
 
         <div className="waitlist-points">
+          <figure className="waitlist-photo">
+            <img
+              alt="Two people smiling at a phone together in a cafe"
+              decoding="async"
+              src={lifestyleImages.cafe}
+            />
+            <figcaption>Opening one city at a time</figcaption>
+          </figure>
           <ul>
             <li>
               <strong>One city at a time.</strong> We open first where the most people sign up.
@@ -3225,7 +3280,7 @@ function WaitlistPage() {
               whom, nothing more.
             </li>
           </ul>
-          <p className="waitlist-cities-label">Opening first in</p>
+          <p className="waitlist-cities-label">Opening first in · tap a city to choose it</p>
           <div className="waitlist-cities">
             {pilotCities.map((city) => (
               <button
