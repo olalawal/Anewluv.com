@@ -1,0 +1,8 @@
+[
+  { "slug": "austin-tx", "label": "Austin, TX" },
+  { "slug": "denver-co", "label": "Denver, CO" },
+  { "slug": "missoula-mt", "label": "Missoula, MT" },
+  { "slug": "chico-ca", "label": "Chico, CA" },
+  { "slug": "iowa-city-ia", "label": "Iowa City, IA" },
+  { "slug": "other", "label": "Somewhere else" }
+]
