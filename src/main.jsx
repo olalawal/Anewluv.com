@@ -2482,7 +2482,11 @@ function LegalPage({ type }) {
       <PageHero eyebrow={content.eyebrow} title={content.title} body={content.body} />
       <section className="section legal-stack">
         {content.sections.map(([heading, paragraphs]) => (
-          <article className="legal-block" key={heading}>
+          <article
+            className="legal-block"
+            id={heading.toLowerCase().replace(/[^a-z0-9]+/g, "-")}
+            key={heading}
+          >
             <h2>{heading}</h2>
             {paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
@@ -2504,6 +2508,11 @@ const legalContent = {
       ["Social Login", ["If you choose to sign in using a third-party provider such as X, Google, Facebook, or Apple, we may receive basic account information from that provider depending on the permissions you approve."]],
       ["Rewards, Referrals, and In-App Purchases", ["Anewluv may offer digital rewards, points, referral incentives, promotional benefits, subscriptions, premium memberships, account upgrades, and other in-app benefits. We may process related referral activity, reward eligibility, purchase history, review status, fraud checks, and records needed to administer app-based platform benefits."]],
       ["Sharing of Information", ["We do not sell your personal information. We may share information with service providers that help us operate the platform, process payments for digital app access, support reward-related features, maintain security, or provide analytics."]],
+      ["Waitlist", [
+        "If you join the Anewluv waitlist, we collect your email address, the city you chose, your age range, your gender, who you want to meet, and a link tag that shows which promotion link you used.",
+        "We use this only to email you once when Anewluv opens in your city and to count interest in each city. We keep it until your city opens plus 12 months, or until you ask us to remove it.",
+        "To be removed, use the Unsubscribe page or the Contact form on this site. We never sell or share waitlist information.",
+      ]],
       ["Contact", ["Questions about privacy can be sent to admin@anewluv.com."]],
     ],
   },
